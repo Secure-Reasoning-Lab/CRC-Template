@@ -215,7 +215,7 @@ def main():
         logger.warning("Failed to register log dir: %s", e)
         log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Setup .codex home (shared dir for persistent Codex state)
+    # Register Codex home as a log directory for post-run analysis.
     codex_home = Path.home() / ".codex"
     codex_home_backup = codex_home.with_name(".codex.pre-crs-backup")
     had_existing_codex_home = codex_home.exists() or codex_home.is_symlink()
@@ -226,12 +226,12 @@ def main():
         codex_home.rename(codex_home_backup)
 
     try:
-        crs.register_shared_dir(codex_home, "codex-home")
-        logger.info("Codex home shared at %s", codex_home)
+        crs.register_log_dir(codex_home)
+        logger.info("Codex home registered as log dir at %s", codex_home)
         if codex_home_backup.exists() or codex_home_backup.is_symlink():
             logger.info("Preserved previous Codex home backup at %s", codex_home_backup)
     except Exception as e:
-        logger.warning("Failed to register codex-home shared dir: %s", e)
+        logger.warning("Failed to register codex-home log dir: %s", e)
         if codex_home.exists() or codex_home.is_symlink():
             if codex_home.is_symlink() or codex_home.is_file():
                 codex_home.unlink()
@@ -239,7 +239,9 @@ def main():
                 shutil.rmtree(codex_home)
         if codex_home_backup.exists() or codex_home_backup.is_symlink():
             codex_home_backup.rename(codex_home)
-        codex_home.mkdir(parents=True, exist_ok=True)
+            logger.info("Restored previous Codex home from backup")
+        else:
+            codex_home.mkdir(parents=True, exist_ok=True)
 
     # Setup source
     source_dir = setup_source()
