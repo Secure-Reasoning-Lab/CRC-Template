@@ -9,7 +9,8 @@ usage() {
 Usage: scripts/setup.sh [--check]
 
 Initializes the oss-crs submodule when needed and checks the local prerequisites
-for the Claude Code finder. --check never changes submodule state.
+for the Claude Code Finder/Patcher workflow. --check never changes submodule
+state.
 EOF
 }
 
@@ -77,25 +78,30 @@ import sys
 from oss_crs.src.config.crs_compose import CRSComposeConfig
 from oss_crs.src.crs_compose import CRSCompose
 
-root = Path(sys.argv[1])
-compose_file = root / "configs" / "finder-claude-code.yaml"
-config = CRSComposeConfig.from_yaml_file(compose_file)
-assert "crs-finder-claude-code" in config.crs_entries
-
-# This validates the local CRS root and manifest without cloning, Docker, or LLM
-# credentials. A temporary work directory keeps the repository clean.
 import tempfile
-with tempfile.TemporaryDirectory() as work_dir:
-    CRSCompose.from_yaml_file(
-        compose_file, Path(work_dir), skip_crs_init=True
-    )
+root = Path(sys.argv[1])
+checks = (
+    ("finder-claude-code.yaml", "crs-finder-claude-code"),
+    ("patcher-claude-code.yaml", "crs-patcher-claude-code"),
+)
 
-print("Finder compose and local manifest parse successfully.")
+# This validates both local CRS roots and manifests without cloning, Docker, or
+# LLM credentials. A temporary work directory keeps the repository clean.
+for compose_name, crs_name in checks:
+    compose_file = root / "configs" / compose_name
+    config = CRSComposeConfig.from_yaml_file(compose_file)
+    assert crs_name in config.crs_entries
+    with tempfile.TemporaryDirectory() as work_dir:
+        CRSCompose.from_yaml_file(
+            compose_file, Path(work_dir), skip_crs_init=True
+        )
+
+print("Finder and Patcher compose/manifests parse successfully.")
 PY
     then
-      note_ok 'finder compose and manifest static check passed.'
+      note_ok 'Finder and Patcher compose/manifest static checks passed.'
     else
-      note_error 'finder compose or local manifest static check failed.'
+      note_error 'Finder or Patcher compose/manifest static check failed.'
     fi
   fi
 else
@@ -121,7 +127,7 @@ fi
 if command -v nproc >/dev/null 2>&1; then
   cpu_count="$(nproc)"
   if ((cpu_count < 8)); then
-    note_warn "The default finder compose names CPUs 0-7, but nproc reports ${cpu_count}. Adjust configs/finder-claude-code.yaml before running."
+    note_warn "The default Claude compose names CPUs 0-7, but nproc reports ${cpu_count}. Adjust the Claude compose files before running."
   else
     note_ok "CPU check: ${cpu_count} logical CPUs available to this shell."
   fi
@@ -139,11 +145,11 @@ if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
 elif [[ -f "$ROOT/.env" ]] && rg -q '^[[:space:]]*(export[[:space:]]+)?CLAUDE_CODE_OAUTH_TOKEN=.+$' "$ROOT/.env"; then
   note_ok 'CLAUDE_CODE_OAUTH_TOKEN is present in root .env.'
 else
-  note_warn 'CLAUDE_CODE_OAUTH_TOKEN is absent. Finder runs will fail before prepare/build.'
+  note_warn 'CLAUDE_CODE_OAUTH_TOKEN is absent. Claude Finder/Patcher runs will fail before prepare/build.'
 fi
 
 if ((status != 0)); then
   exit "$status"
 fi
 
-printf 'Setup checks passed. Use scripts/run-finder.sh to start a finder run.\n'
+printf 'Setup checks passed. Use scripts/run-claude-e2e.sh for the staged Claude workflow.\n'

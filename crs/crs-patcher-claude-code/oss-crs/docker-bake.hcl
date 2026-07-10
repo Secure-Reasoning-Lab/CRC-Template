@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-claude-code Docker Bake Configuration
+# CRC-Template Claude Code Patcher Docker Bake Configuration
 # =============================================================================
 #
 # Builds the CRS base image with Claude Code CLI and Python dependencies.
@@ -10,7 +10,10 @@
 # =============================================================================
 
 variable "REGISTRY" {
-  default = "ghcr.io/team-atlanta"
+  # `localhost` makes an accidental `prepare --publish` fail without a local
+  # registry instead of targeting the upstream Team Atlanta namespace. Override
+  # explicitly when publishing an intentionally owned derived image.
+  default = "localhost"
 }
 
 variable "VERSION" {
@@ -39,17 +42,17 @@ group "default" {
 }
 
 group "prepare" {
-  targets = ["claude-code-base"]
+  targets = ["crs-patcher-claude-code-base"]
 }
 
 # -----------------------------------------------------------------------------
 # Base Image
 # -----------------------------------------------------------------------------
 
-target "claude-code-base" {
+target "crs-patcher-claude-code-base" {
   context    = "."
   dockerfile = "oss-crs/base.Dockerfile"
-  tags       = tags("claude-code-base")
+  tags       = tags("crs-patcher-claude-code-base")
   args = {
     CLAUDE_CODE_CLI_VERSION = CLAUDE_CODE_CLI_VERSION
   }

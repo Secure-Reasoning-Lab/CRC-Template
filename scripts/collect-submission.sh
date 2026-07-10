@@ -6,17 +6,18 @@ cd "$ROOT"
 
 DEFAULT_COMPOSE_FILE="$ROOT/configs/finder-claude-code.yaml"
 DEFAULT_WORK_DIR="$ROOT/generated/oss-crs-work"
-FINDER_NAME="crs-finder-claude-code"
+DEFAULT_CRS_NAME="crs-finder-claude-code"
 
 usage() {
   cat <<'EOF'
 Usage: scripts/collect-submission.sh --fuzz-proj-path PATH --target-harness NAME (--run-id ID | --latest) [options]
 
-Copies Finder artifacts resolved by `oss-crs artifacts` into submissions/ and
-creates an oss-crs archive from the original submit directories.
+Copies selected CRS artifacts resolved by `oss-crs artifacts` into submissions/
+and creates an oss-crs archive from that run's original submit directories.
 
 Options:
-  --out-dir DIR                Export directory (default: submissions/<target>/<run-id>)
+  --crs-name NAME             Compose entry name (default: crs-finder-claude-code)
+  --out-dir DIR                Export directory (default: submissions/<target>/<crs-name>/<run-id>)
   --include-all                Include exchange data and logs in the oss-crs archive
   --build-id ID                Build ID used while resolving artifacts
   --sanitizer NAME             Sanitizer (default: address)
@@ -41,9 +42,11 @@ BUILD_ID=""
 SANITIZER="address"
 COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 WORK_DIR="$DEFAULT_WORK_DIR"
+CRS_NAME="$DEFAULT_CRS_NAME"
 OUT_DIR=""
 LATEST=false
 INCLUDE_ALL=false
+OUT_DIR_EXPLICIT=false
 
 while (($#)); do
   case "$1" in
@@ -65,6 +68,11 @@ while (($#)); do
     --run-id)
       (($# >= 2)) || die '--run-id requires an ID'
       RUN_ID="$2"
+      shift
+      ;;
+    --crs-name)
+      (($# >= 2)) || die '--crs-name requires a name'
+      CRS_NAME="$2"
       shift
       ;;
     --latest)
@@ -93,6 +101,7 @@ while (($#)); do
     --out-dir)
       (($# >= 2)) || die '--out-dir requires a directory'
       OUT_DIR="$2"
+      OUT_DIR_EXPLICIT=true
       shift
       ;;
     --include-all)
@@ -111,6 +120,7 @@ done
 
 [[ -n "$FUZZ_PROJ_PATH" ]] || die '--fuzz-proj-path is required'
 [[ -n "$TARGET_HARNESS" ]] || die '--target-harness is required'
+[[ -n "$CRS_NAME" ]] || die '--crs-name must not be empty'
 [[ -d "$FUZZ_PROJ_PATH" ]] || die "Fuzz project directory does not exist: $FUZZ_PROJ_PATH"
 [[ -f "$COMPOSE_FILE" ]] || die "Compose file does not exist: $COMPOSE_FILE"
 [[ -z "$TARGET_SOURCE_PATH" || -d "$TARGET_SOURCE_PATH" ]] || die "Target source override is not a directory: $TARGET_SOURCE_PATH"
@@ -137,38 +147,38 @@ else
   PRINT_ARGS+=(--latest)
 fi
 
-"$ROOT/scripts/print-artifacts.sh" "${PRINT_ARGS[@]}" > "$artifact_json"
+"$ROOT/scripts/print-artifacts.sh" --crs-name "$CRS_NAME" "${PRINT_ARGS[@]}" > "$artifact_json"
 
-python3 - "$artifact_json" "$FINDER_NAME" > "$artifact_fields" <<'PY'
+python3 - "$artifact_json" "$CRS_NAME" > "$artifact_fields" <<'PY'
 import json
 import sys
 
 json_path = sys.argv[1]
-finder_name = sys.argv[2]
+crs_name = sys.argv[2]
 
 with open(json_path, encoding="utf-8") as f:
     data = json.load(f)
 
-finder = data.get("crs", {}).get(finder_name)
-if not isinstance(finder, dict):
+crs = data.get("crs", {}).get(crs_name)
+if not isinstance(crs, dict):
     raise SystemExit(
-        f"Artifact JSON has no crs[{finder_name!r}] entry. "
+        f"Artifact JSON has no crs[{crs_name!r}] entry. "
         "Check the compose entry name."
     )
 
 for value in (
     data.get("run_id"),
-    finder.get("submit_dir"),
-    finder.get("pov"),
-    finder.get("seed"),
-    finder.get("bug_candidate"),
-    finder.get("patch"),
+    crs.get("submit_dir"),
+    crs.get("pov"),
+    crs.get("seed"),
+    crs.get("bug_candidate"),
+    crs.get("patch"),
 ):
     print("" if value is None else str(value))
 PY
 
 mapfile -t fields < "$artifact_fields"
-[[ ${#fields[@]} -eq 6 ]] || die 'Could not parse the expected Finder artifact paths.'
+[[ ${#fields[@]} -eq 6 ]] || die 'Could not parse the expected CRS artifact paths.'
 
 RESOLVED_RUN_ID="${fields[0]}"
 SUBMIT_DIR="${fields[1]}"
@@ -181,7 +191,10 @@ PATCH_DIR="${fields[5]}"
 if [[ -z "$OUT_DIR" ]]; then
   target_name="$(basename "${FUZZ_PROJ_PATH%/}")"
   [[ -n "$target_name" ]] || target_name='target'
-  OUT_DIR="$ROOT/submissions/$target_name/$RESOLVED_RUN_ID"
+  OUT_DIR="$ROOT/submissions/$target_name/$CRS_NAME/$RESOLVED_RUN_ID"
+fi
+if [[ -e "$OUT_DIR" && "$OUT_DIR_EXPLICIT" == false ]]; then
+  die "Default export directory already exists: $OUT_DIR (pass --out-dir to choose an existing directory)"
 fi
 mkdir -p "$OUT_DIR"
 cp "$artifact_json" "$OUT_DIR/artifacts.json"
@@ -208,7 +221,7 @@ copy_artifact_dir "$BUG_CANDIDATE_DIR" bug-candidates
 copy_artifact_dir "$PATCH_DIR" patches
 
 {
-  printf 'finder=%s\n' "$FINDER_NAME"
+  printf 'crs_name=%s\n' "$CRS_NAME"
   printf 'run_id=%s\n' "$RESOLVED_RUN_ID"
   printf 'submit_dir=%s\n' "$SUBMIT_DIR"
   printf 'pov_dir=%s\n' "$POV_DIR"
@@ -228,4 +241,4 @@ if [[ "$INCLUDE_ALL" == true ]]; then
 fi
 
 "${OSS_CRS[@]}" "${ARCHIVE_ARGS[@]}"
-printf 'Collected Finder submission at %s\n' "$OUT_DIR"
+printf 'Collected %s submission at %s\n' "$CRS_NAME" "$OUT_DIR"

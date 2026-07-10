@@ -6,15 +6,17 @@ cd "$ROOT"
 
 DEFAULT_COMPOSE_FILE="$ROOT/configs/finder-claude-code.yaml"
 DEFAULT_WORK_DIR="$ROOT/generated/oss-crs-work"
+DEFAULT_CRS_NAME="crs-finder-claude-code"
 
 usage() {
   cat <<'EOF'
 Usage: scripts/print-artifacts.sh --fuzz-proj-path PATH --target-harness NAME (--run-id ID | --latest) [options]
 
-Prints the JSON returned by `oss-crs artifacts`. The finder-specific result is
-available at `.crs["crs-finder-claude-code"]`.
+Prints the JSON returned by `oss-crs artifacts`. The selected CRS result is
+available at `.crs["<crs-name>"]`.
 
 Options:
+  --crs-name NAME             Compose entry name (default: crs-finder-claude-code)
   --build-id ID               Resolve build output for a specific build
   --sanitizer NAME            Sanitizer (default: address)
   --target-source-path PATH   Optional target source override
@@ -38,6 +40,7 @@ BUILD_ID=""
 SANITIZER="address"
 COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 WORK_DIR="$DEFAULT_WORK_DIR"
+CRS_NAME="$DEFAULT_CRS_NAME"
 LATEST=false
 
 while (($#)); do
@@ -60,6 +63,11 @@ while (($#)); do
     --run-id)
       (($# >= 2)) || die '--run-id requires an ID'
       RUN_ID="$2"
+      shift
+      ;;
+    --crs-name)
+      (($# >= 2)) || die '--crs-name requires a name'
+      CRS_NAME="$2"
       shift
       ;;
     --latest)
@@ -98,6 +106,7 @@ done
 
 [[ -n "$FUZZ_PROJ_PATH" ]] || die '--fuzz-proj-path is required'
 [[ -n "$TARGET_HARNESS" ]] || die '--target-harness is required'
+[[ -n "$CRS_NAME" ]] || die '--crs-name must not be empty'
 [[ -d "$FUZZ_PROJ_PATH" ]] || die "Fuzz project directory does not exist: $FUZZ_PROJ_PATH"
 [[ -f "$COMPOSE_FILE" ]] || die "Compose file does not exist: $COMPOSE_FILE"
 [[ -z "$TARGET_SOURCE_PATH" || -d "$TARGET_SOURCE_PATH" ]] || die "Target source override is not a directory: $TARGET_SOURCE_PATH"
@@ -105,6 +114,7 @@ done
 [[ -n "$RUN_ID" || "$LATEST" == true ]] || die 'Provide --run-id or --latest to avoid an interactive selection'
 
 command -v uv >/dev/null 2>&1 || die 'uv is required. Run scripts/setup.sh for diagnostics.'
+command -v python3 >/dev/null 2>&1 || die 'python3 is required to validate artifact JSON.'
 
 OSS_CRS=(uv run --project "$ROOT/oss-crs" oss-crs)
 ARGS=(artifacts --compose-file "$COMPOSE_FILE" --work-dir "$WORK_DIR" --fuzz-proj-path "$FUZZ_PROJ_PATH" --target-harness "$TARGET_HARNESS" --sanitizer "$SANITIZER")
@@ -120,4 +130,24 @@ else
   ARGS+=(--latest)
 fi
 
-"${OSS_CRS[@]}" "${ARGS[@]}"
+artifact_json="$(mktemp)"
+trap 'rm -f "$artifact_json"' EXIT
+
+"${OSS_CRS[@]}" "${ARGS[@]}" > "$artifact_json"
+
+python3 - "$artifact_json" "$CRS_NAME" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+crs_name = sys.argv[2]
+if not isinstance(data.get("crs", {}).get(crs_name), dict):
+    raise SystemExit(
+        f"Artifact JSON has no crs[{crs_name!r}] entry. "
+        "Check --crs-name and --compose-file."
+    )
+PY
+
+cat "$artifact_json"

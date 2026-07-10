@@ -11,14 +11,18 @@ patch, score, or leaderboard result.
 
 The local workflow has useful but limited checks:
 
-1. `scripts/setup.sh --check` validates the checked-in compose and Finder
-   manifest without requiring Docker or credentials.
+1. `scripts/setup.sh --check` validates the checked-in Finder and Patcher
+   compose/manifests without requiring Docker or credentials.
 2. `scripts/run-finder.sh` drives OSS-CRS preparation, target building, and a
    finder run for a selected harness.
-3. `scripts/print-artifacts.sh` resolves `SUBMIT_DIR` and exchange paths through
-   the OSS-CRS JSON interface.
-4. `scripts/collect-submission.sh` copies the finder artifacts and asks
-   `oss-crs archive` to create a transport archive.
+3. `scripts/run-patcher.sh` accepts startup evidence and produces a local patch
+   artifact only after the Patcher submits a non-empty `.diff`.
+4. `scripts/run-claude-e2e.sh` serializes the two components: it resolves
+   Finder PoVs, stages them as Patcher startup input, and exports a local
+   handoff bundle. It does not call CRSBench.
+5. `scripts/print-artifacts.sh` and `scripts/collect-submission.sh` resolve a
+   selected compose entry through the OSS-CRS JSON interface and export an
+   individual CRS run.
 
 The Finder prompts agents to use `libCRS run-pov` before writing a PoV. That is
 an implementation-level gate, not an independent organizer verification
@@ -56,7 +60,8 @@ an organizer needs distributed verification.
 ## Interface Between Repositories
 
 The development repository should export only reproducible artifacts and
-metadata. For the current Finder, `collect-submission.sh` writes:
+metadata. For an individual Finder or Patcher run, `collect-submission.sh`
+writes:
 
 ```text
 artifacts.json
@@ -67,6 +72,13 @@ bug-candidates/
 patches/
 oss-crs-submission.tar.gz
 ```
+
+The local E2E wrapper produces a separate bundle containing both stage artifact
+JSON files, staged PoVs, exported patches, and `handoff-metadata.json`. It does
+not combine the two independent OSS-CRS archives into an official submission:
+each stage has its own compose and work directory. `CRC-Evaluate` should define
+the accepted combined schema, validate it, and retain the organizer-side mapping
+between a Finder result and a Patcher result.
 
 `CRC-Evaluate` should define its own accepted submission schema and validate it
 before invoking CRSBench. It should not trust a team-local `verified` label,

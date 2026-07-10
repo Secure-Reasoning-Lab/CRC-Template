@@ -3,14 +3,17 @@
 `CRC-Template` is the local development repository for Cyber Reasoning System
 (CRS) implementations. It keeps the OSS-CRS framework as one submodule and
 keeps CRS implementations in this repository as normal source trees. The
-currently integrated path is the Claude Code bug finder:
+currently integrated Claude Code workflow is:
 
 ```text
 crs/crs-finder-claude-code
+            -> submitted PoVs
+crs/crs-patcher-claude-code
 ```
 
-The Claude patcher and both Codex directories remain placeholders. There is no
-supported Claude end-to-end finder-to-patcher workflow yet.
+The Finder and Patcher are imported with their Team Atlanta Git histories
+preserved through `git subtree` merges. The Codex directories remain
+placeholders.
 
 ## Prerequisites
 
@@ -28,10 +31,10 @@ Create an ignored root `.env` file or export the token in the shell:
 CLAUDE_CODE_OAUTH_TOKEN=...
 ```
 
-The finder compose deliberately omits `llm_config`; it uses Claude Code OAuth
-instead of an OSS-CRS-managed LiteLLM sidecar. The token placeholder is defined
-in the Finder run module, not the team-level compose entry, so it is not passed
-into the target's build containers.
+The checked-in Claude compose files deliberately omit `llm_config`; they use
+Claude Code OAuth instead of an OSS-CRS-managed LiteLLM sidecar. The token
+placeholder is defined in each CRS run module, not the team-level compose entry,
+so it is not passed into target build containers.
 
 ## Setup
 
@@ -41,11 +44,50 @@ Initialize the framework and inspect the local machine:
 ./scripts/setup.sh
 ```
 
-`./scripts/setup.sh --check` does not alter submodule state. It validates the
-root compose and local Finder manifest without Docker, then reports missing
-runtime prerequisites. The Finder compose uses a relative `source.local_path`;
-all root scripts change to the repository root before calling OSS-CRS so that
-path is stable.
+`./scripts/setup.sh --check` does not alter submodule state. It validates both
+local Claude compose files and manifests without Docker, then reports missing
+runtime prerequisites. Each compose uses a relative `source.local_path`; all
+root scripts change to the repository root before calling OSS-CRS so that path
+is stable.
+
+## Claude End-To-End Run
+
+Run the supported development workflow against one harness:
+
+```bash
+./scripts/run-claude-e2e.sh \
+  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --target-harness example_fuzzer \
+  --e2e-id example-full-001
+```
+
+The wrapper runs the Finder to completion, resolves its submitted PoVs through
+`oss-crs artifacts`, safely flattens them into a staging directory, then starts
+the Patcher with `--pov-dir`. The two stages use separate work directories and
+separate build/run IDs because the Patcher fetches input only at startup and
+must build its own CRS-specific target output. It fails if the Finder submits no
+PoV or if the Patcher submits no non-empty `.diff`.
+
+For a delta challenge, pass the delta evidence to both stages:
+
+```bash
+./scripts/run-claude-e2e.sh \
+  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --target-source-path /path/to/example-source \
+  --target-harness example_fuzzer \
+  --diff /path/to/ref.diff \
+  --seed-dir /path/to/seeds \
+  --e2e-id example-delta-001
+```
+
+The resulting local bundle contains Finder/Patcher artifact JSON, staged PoVs,
+exported patches, and handoff metadata below:
+
+```text
+submissions/<target>/e2e-<e2e-id>/
+```
+
+It is an implementation artifact, not a CRSBench result.
 
 ## Finder Run
 
@@ -80,6 +122,27 @@ The `--source-override` alias is available for `--target-source-path`. Use
 CRS returns exit code `124` for a timeout or early exit; the wrapper still
 prints artifacts before returning that code.
 
+## Patcher Run
+
+Run the Patcher directly when evidence already exists:
+
+```bash
+./scripts/run-patcher.sh \
+  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --target-harness example_fuzzer \
+  --pov-dir /path/to/povs \
+  --run-id example-patch-001
+```
+
+It accepts `--pov`, `--pov-dir`, `--diff`, `--seed-dir`,
+`--bug-candidate`, and `--bug-candidate-dir`. At least one evidence input is
+required. The Patcher wrapper treats a successful no-output run as failure;
+only non-empty `.diff` artifacts count as a local patch result.
+
+The checked-in Patcher Bake defaults to local image tags. Do not use
+`oss-crs prepare --publish` until its `REGISTRY` is explicitly set to a
+registry owned by the derived project.
+
 ## Artifacts And Export
 
 Resolve a completed run without guessing workdir paths:
@@ -91,26 +154,30 @@ Resolve a completed run without guessing workdir paths:
   --run-id example-full-001
 ```
 
-Finder-specific paths are under:
+Pass `--crs-name` when resolving a non-Finder compose entry. For example,
+Patcher paths are under:
 
 ```text
-.crs["crs-finder-claude-code"]
+.crs["crs-patcher-claude-code"]
 ```
 
 Export submitted files and create a framework archive:
 
 ```bash
 ./scripts/collect-submission.sh \
+  --crs-name crs-patcher-claude-code \
   --fuzz-proj-path /path/to/oss-fuzz/projects/example \
   --target-harness example_fuzzer \
-  --run-id example-full-001
+  --run-id example-patch-001 \
+  --compose-file configs/patcher-claude-code.yaml \
+  --work-dir generated/oss-crs-work/patcher-claude-code
 ```
 
 By default this writes copied artifact directories, `artifacts.json`, collection
 metadata, and `oss-crs-submission.tar.gz` below:
 
 ```text
-submissions/<target>/<resolved-run-id>/
+submissions/<target>/<crs-name>/<resolved-run-id>/
 ```
 
 Use `--include-all` when the archive should additionally contain exchange data
@@ -138,6 +205,6 @@ benchmark package. See [docs/evaluation-boundary.md](docs/evaluation-boundary.md
 
 ## Provenance
 
-The Finder was imported from Team Atlanta with Git subtree history preserved.
-The upstream revision, import commit, and licensing follow-up are recorded in
-[docs/upstream-provenance.md](docs/upstream-provenance.md).
+The Finder and Patcher were imported from Team Atlanta with Git subtree history
+preserved. Their upstream revisions, import commits, and licensing follow-up
+are recorded in [docs/upstream-provenance.md](docs/upstream-provenance.md).

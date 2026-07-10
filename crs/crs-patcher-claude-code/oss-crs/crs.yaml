@@ -2,7 +2,9 @@ name: crs-patcher-claude-code
 type:
   - bug-fixing
 version: 1.0.0
-docker_registry: ghcr.io/team-atlanta/crs-claude-code
+# Local Template default. Set an explicit REGISTRY in docker-bake.hcl only when
+# this derived CRS is intentionally published under a repository you control.
+docker_registry: local
 
 prepare_phase:
   hcl: oss-crs/docker-bake.hcl

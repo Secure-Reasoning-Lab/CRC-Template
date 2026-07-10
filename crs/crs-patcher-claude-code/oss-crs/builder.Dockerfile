@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-claude-code Builder Dockerfile
+# CRC-Template Claude Code Patcher Builder Dockerfile
 # =============================================================================
 # BUILD phase: Compiles the target project and submits build outputs.
 # =============================================================================

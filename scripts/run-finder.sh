@@ -156,7 +156,8 @@ docker compose version >/dev/null 2>&1 || die 'Docker Compose v2 is required.'
 
 if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -f "$ROOT/.env" ]]; then
   # Read only the documented dotenv assignment. Do not execute a local .env as
-  # shell code merely to obtain a token for this wrapper.
+  # shell code merely to obtain a token for this wrapper. OSS-CRS validates the
+  # required run-module variable immediately before the run phase.
   token_line="$(sed -n -E 's/^[[:space:]]*(export[[:space:]]+)?CLAUDE_CODE_OAUTH_TOKEN[[:space:]]*=[[:space:]]*//p' "$ROOT/.env" | tail -n 1)"
   token_line="${token_line%$'\r'}"
   if [[ "${token_line:0:1}" == '"' && "${token_line: -1}" == '"' ]]; then
@@ -166,8 +167,6 @@ if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -f "$ROOT/.env" ]]; then
   fi
   [[ -z "$token_line" || "$token_line" == \#* ]] || export CLAUDE_CODE_OAUTH_TOKEN="$token_line"
 fi
-[[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]] || die 'CLAUDE_CODE_OAUTH_TOKEN is required (export it or set it in root .env).'
-
 if [[ "$SKIP_BUILD" == true && -z "$BUILD_ID" ]]; then
   die '--skip-build requires --build-id; oss-crs run otherwise auto-builds.'
 fi
