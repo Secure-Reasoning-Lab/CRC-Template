@@ -138,79 +138,91 @@ def _dispatch_task(rnd: int, cand_file: Path) -> str:
 def main() -> None:
     ctx = runtime.boot()
     runtime.install_sigterm_handler()
-    # Make the pov-gen-cov / seed-gen subagents available to the dispatch node.
-    installed = prompts.install_agents(ctx.source_dir, ctx.harness)
-    logger.info("Installed %d subagent(s): %s", len(installed), ", ".join(installed))
-    CAND_DIR.mkdir(parents=True, exist_ok=True)
+    exit_error: BaseException | None = None
+    try:
+        # Make the pov-gen-cov / seed-gen subagents available to the dispatch node.
+        installed = prompts.install_agents(ctx.source_dir, ctx.harness)
+        logger.info("Installed %d subagent(s): %s", len(installed), ", ".join(installed))
+        CAND_DIR.mkdir(parents=True, exist_ok=True)
 
-    explorer_role = prompts.load_role("explorer", harness=ctx.harness, source_dir=ctx.source_dir)
-    dispatcher_role = prompts.load_role("dispatcher", harness=ctx.harness, source_dir=ctx.source_dir)
-    deadline = time.time() + BUDGET if BUDGET else None
+        explorer_role = prompts.load_role("explorer", harness=ctx.harness, source_dir=ctx.source_dir)
+        dispatcher_role = prompts.load_role("dispatcher", harness=ctx.harness, source_dir=ctx.source_dir)
+        deadline = time.time() + BUDGET if BUDGET else None
 
-    def warm_up(state: GraphState) -> dict:
-        logger.info("=== warm-up: starting fuzzer(s), %ds to warm up ===", WARMUP_SECONDS)
-        _start_fuzzers(ctx.harness)
-        time.sleep(WARMUP_SECONDS)
-        return {}
+        def warm_up(state: GraphState) -> dict:
+            logger.info("=== warm-up: starting fuzzer(s), %ds to warm up ===", WARMUP_SECONDS)
+            _start_fuzzers(ctx.harness)
+            time.sleep(WARMUP_SECONDS)
+            return {}
 
-    def measure(state: GraphState) -> dict:
-        logger.info("=== round %d: measuring coverage ===", state["round"])
-        try:
-            subprocess.run(["crs-coverage", "--harness", ctx.harness],
-                           cwd=str(ctx.source_dir), capture_output=True, text=True,
-                           timeout=ROUND_TIMEOUT or 1200)
-        except Exception as e:  # noqa: BLE001
-            logger.warning("crs-coverage failed: %s", e)
-        return {}
+        def measure(state: GraphState) -> dict:
+            logger.info("=== round %d: measuring coverage ===", state["round"])
+            try:
+                subprocess.run(["crs-coverage", "--harness", ctx.harness],
+                               cwd=str(ctx.source_dir), capture_output=True, text=True,
+                               timeout=ROUND_TIMEOUT or 1200)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("crs-coverage failed: %s", e)
+            return {}
 
-    def explore(state: GraphState) -> dict:
-        rnd = state["round"]
-        cand_file = CAND_DIR / f"round_{rnd}.json"
-        logger.info("=== round %d: explore -> %s ===", rnd, cand_file)
-        res = run_claude_p(
-            _explore_task(rnd, cand_file, ctx.harness),
-            cwd=ctx.source_dir, system_prompt=explorer_role, timeout=ROUND_TIMEOUT,
-            log_path=ctx.agent_work_dir / f"explore_{rnd}.jsonl")
-        cands = _read_candidates(cand_file)
-        logger.info("round %d explore done (is_error=%s turns=%s cost=%s): %d candidate(s)",
-                    rnd, res.is_error, res.num_turns, res.total_cost_usd, len(cands))
-        return {"n_candidates": len(cands)}
+        def explore(state: GraphState) -> dict:
+            rnd = state["round"]
+            cand_file = CAND_DIR / f"round_{rnd}.json"
+            logger.info("=== round %d: explore -> %s ===", rnd, cand_file)
+            res = run_claude_p(
+                _explore_task(rnd, cand_file, ctx.harness),
+                cwd=ctx.source_dir, system_prompt=explorer_role, timeout=ROUND_TIMEOUT,
+                log_path=ctx.agent_work_dir / f"explore_{rnd}.jsonl")
+            cands = _read_candidates(cand_file)
+            logger.info("round %d explore done (is_error=%s turns=%s cost=%s): %d candidate(s)",
+                        rnd, res.is_error, res.num_turns, res.total_cost_usd, len(cands))
+            return {"n_candidates": len(cands)}
 
-    def dispatch(state: GraphState) -> dict:
-        rnd = state["round"]
-        if state["n_candidates"] == 0:
-            logger.info("round %d: no candidates; skipping dispatch", rnd)
+        def dispatch(state: GraphState) -> dict:
+            rnd = state["round"]
+            if state["n_candidates"] == 0:
+                logger.info("round %d: no candidates; skipping dispatch", rnd)
+                return {"round": rnd + 1}
+            cand_file = CAND_DIR / f"round_{rnd}.json"
+            logger.info("=== round %d: dispatch %d candidate(s) ===", rnd, state["n_candidates"])
+            res = run_claude_p(
+                _dispatch_task(rnd, cand_file),
+                cwd=ctx.source_dir, system_prompt=dispatcher_role, timeout=ROUND_TIMEOUT,
+                log_path=ctx.agent_work_dir / f"dispatch_{rnd}.jsonl")
+            logger.info("round %d dispatch done (is_error=%s turns=%s cost=%s)",
+                        rnd, res.is_error, res.num_turns, res.total_cost_usd)
             return {"round": rnd + 1}
-        cand_file = CAND_DIR / f"round_{rnd}.json"
-        logger.info("=== round %d: dispatch %d candidate(s) ===", rnd, state["n_candidates"])
-        res = run_claude_p(
-            _dispatch_task(rnd, cand_file),
-            cwd=ctx.source_dir, system_prompt=dispatcher_role, timeout=ROUND_TIMEOUT,
-            log_path=ctx.agent_work_dir / f"dispatch_{rnd}.jsonl")
-        logger.info("round %d dispatch done (is_error=%s turns=%s cost=%s)",
-                    rnd, res.is_error, res.num_turns, res.total_cost_usd)
-        return {"round": rnd + 1}
 
-    def should_continue(state: GraphState) -> str:
-        # dispatch increments `round` at the end, so after N rounds round == N.
-        if MAX_ROUNDS and state["round"] >= MAX_ROUNDS:
-            logger.info("max rounds (%d) reached; ending the loop", MAX_ROUNDS)
-            return "stop"
-        if deadline and time.time() >= deadline:
-            logger.info("budget (%ds) reached; ending the loop", BUDGET)
-            return "stop"
-        return "continue"
+        def should_continue(state: GraphState) -> str:
+            # dispatch increments `round` at the end, so after N rounds round == N.
+            if MAX_ROUNDS and state["round"] >= MAX_ROUNDS:
+                logger.info("max rounds (%d) reached; ending the loop", MAX_ROUNDS)
+                return "stop"
+            if deadline and time.time() >= deadline:
+                logger.info("budget (%ds) reached; ending the loop", BUDGET)
+                return "stop"
+            return "continue"
 
-    app = build_graph(
-        {"warm_up": warm_up, "measure": measure, "explore": explore, "dispatch": dispatch},
-        should_continue)
+        app = build_graph(
+            {"warm_up": warm_up, "measure": measure, "explore": explore, "dispatch": dispatch},
+            should_continue)
 
-    logger.info("Coverage-guided LangGraph loop for harness %s "
-                "(warmup=%ds, round_timeout=%ds, budget=%s)",
-                ctx.harness, WARMUP_SECONDS, ROUND_TIMEOUT, BUDGET or "until-killed")
-    # PoVs + seeds auto-submit via the dirs registered in boot(); recursion_limit is
-    # raised far above the loop count so the long-running loop isn't cut short.
-    app.invoke({"round": 0, "n_candidates": 0}, config={"recursion_limit": 1_000_000})
+        logger.info("Coverage-guided LangGraph loop for harness %s "
+                    "(warmup=%ds, round_timeout=%ds, budget=%s)",
+                    ctx.harness, WARMUP_SECONDS, ROUND_TIMEOUT, BUDGET or "until-killed")
+        # PoVs + seeds auto-submit via the dirs registered in boot(); recursion_limit is
+        # raised far above the loop count so the long-running loop isn't cut short.
+        app.invoke({"round": 0, "n_candidates": 0}, config={"recursion_limit": 1_000_000})
+    except BaseException as exc:
+        exit_error = exc
+        raise
+    finally:
+        try:
+            runtime.flush_submissions(ctx.crs, ctx.harness)
+        except Exception:  # noqa: BLE001
+            logger.exception("Final artifact submission failed")
+            if exit_error is None:
+                raise
 
 
 if __name__ == "__main__":

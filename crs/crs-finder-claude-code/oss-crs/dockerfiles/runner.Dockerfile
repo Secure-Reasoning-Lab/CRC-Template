@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-bug-finding-template runner module (run phase)
+# crs-finder-claude-code runner module (run phase)
 # =============================================================================
 # Builds FROM the framework-provided base_runner_image (oss-crs #258) so the
 # runtime OS matches the target's builder — harness binaries executed in the
@@ -65,16 +65,11 @@ RUN /libCRS/install.sh \
 # Our CRS package (LangGraph node + tools + deps). The run-phase entrypoints live
 # in crs/entrypoint/ (shipped by `COPY crs/`); its entrypoint.sh multiplexer picks
 # one at run time.
-COPY pyproject.toml /opt/crs-bug-finding-template/pyproject.toml
-COPY crs/ /opt/crs-bug-finding-template/crs/
-RUN pip3 install /opt/crs-bug-finding-template \
-    && chmod +x /opt/crs-bug-finding-template/crs/entrypoint/entrypoint.sh
+COPY pyproject.toml /opt/crs-finder-claude-code/pyproject.toml
+COPY crs/ /opt/crs-finder-claude-code/crs/
+RUN pip3 install /opt/crs-finder-claude-code \
+    && chmod +x /opt/crs-finder-claude-code/crs/entrypoint/entrypoint.sh
 
-# Entrypoint multiplexer (crs/entrypoint/entrypoint.sh): selects the runner
-# entrypoint from $CRS_ENTRYPOINT (set in the compose file's additional_env),
-# defaulting to run_crs. No rebuild needed to switch strategies/probes:
-#   run_crs            - single Claude Code agent (default)
-#   run_crs_langgraph  - seed-gen ∥ pov-gen as parallel LangGraph nodes
-#   run_crs_subagents  - one orchestrator delegating to Claude Code subagents
-#   test_{gdb,codeql,fuzz,afl,coverage} - isolated tool probes
-ENTRYPOINT ["bash", "/opt/crs-bug-finding-template/crs/entrypoint/entrypoint.sh"]
+# Entrypoint multiplexer defaults to the supported production strategy,
+# `run_crs`. Upstream tutorial experiments require an explicit opt-in.
+ENTRYPOINT ["bash", "/opt/crs-finder-claude-code/crs/entrypoint/entrypoint.sh"]

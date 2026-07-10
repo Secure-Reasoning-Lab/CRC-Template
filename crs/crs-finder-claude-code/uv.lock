@@ -140,7 +140,7 @@ wheels = [
 ]
 
 [[package]]
-name = "crs-bug-finding-template"
+name = "crs-finder-claude-code"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

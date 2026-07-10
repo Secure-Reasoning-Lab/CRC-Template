@@ -32,35 +32,44 @@ logger = logging.getLogger("run_crs_subagents")
 
 def main() -> None:
     ctx = runtime.boot()
-
-    # Install the Claude Code subagent definitions into .claude/agents/ so the
-    # orchestrator can delegate to them by name via the Task tool.
-    installed = prompts.install_agents(ctx.source_dir, ctx.harness)
-    logger.info("Installed %d subagent(s): %s", len(installed), ", ".join(installed))
-
-    # The orchestrator's role/system prompt (crs/roles/orchestrator.md).
-    orchestrator_role = prompts.load_role(
-        "orchestrator", harness=ctx.harness, source_dir=ctx.source_dir)
-
     runtime.install_sigterm_handler()
+    exit_error: BaseException | None = None
+    try:
+        # Install the Claude Code subagent definitions into .claude/agents/ so the
+        # orchestrator can delegate to them by name via the Task tool.
+        installed = prompts.install_agents(ctx.source_dir, ctx.harness)
+        logger.info("Installed %d subagent(s): %s", len(installed), ", ".join(installed))
 
-    task = (
-        f"Coordinate the seed-gen, pov-gen, and pov-gen-cov subagents to find "
-        f"vulnerabilities in `{ctx.target}` through harness `{ctx.harness}`, saving "
-        f"verified crashing inputs to `{ctx.pov_dir}`. Read CLAUDE.md. Launch all "
-        f"three subagents in parallel now and keep going until killed."
-    )
+        # The orchestrator's role/system prompt (crs/roles/orchestrator.md).
+        orchestrator_role = prompts.load_role(
+            "orchestrator", harness=ctx.harness, source_dir=ctx.source_dir)
 
-    logger.info("Invoking subagent orchestrator for harness %s", ctx.harness)
-    # PoVs + seeds auto-submit via the dirs registered in boot() — no manual submit.
-    result = run_claude_p(
-        task,
-        cwd=ctx.source_dir,
-        system_prompt=orchestrator_role,
-        log_path=ctx.agent_work_dir / "orchestrator_stream.jsonl",
-    )
-    logger.info("orchestrator finished: is_error=%s turns=%s cost=%s",
-                result.is_error, result.num_turns, result.total_cost_usd)
+        task = (
+            f"Coordinate the seed-gen, pov-gen, and pov-gen-cov subagents to find "
+            f"vulnerabilities in `{ctx.target}` through harness `{ctx.harness}`, saving "
+            f"verified crashing inputs to `{ctx.pov_dir}`. Read CLAUDE.md. Launch all "
+            f"three subagents in parallel now and keep going until killed."
+        )
+
+        logger.info("Invoking subagent orchestrator for harness %s", ctx.harness)
+        result = run_claude_p(
+            task,
+            cwd=ctx.source_dir,
+            system_prompt=orchestrator_role,
+            log_path=ctx.agent_work_dir / "orchestrator_stream.jsonl",
+        )
+        logger.info("orchestrator finished: is_error=%s turns=%s cost=%s",
+                    result.is_error, result.num_turns, result.total_cost_usd)
+    except BaseException as exc:
+        exit_error = exc
+        raise
+    finally:
+        try:
+            runtime.flush_submissions(ctx.crs, ctx.harness)
+        except Exception:  # noqa: BLE001
+            logger.exception("Final artifact submission failed")
+            if exit_error is None:
+                raise
 
 
 if __name__ == "__main__":

@@ -9,7 +9,10 @@ Reading and reasoning about the code is the core of the job — the tools are ai
 5. **Save** — write verified crashing inputs to the POV dir with descriptive filenames (e.g. `heap_overflow_parse_header.bin`).
 6. **Repeat** — different code paths, bug classes, input structures.
 
-When a bug is hard to reach by hand, you may also drive the fuzzers yourself — `crs-fuzz start` / `crs-afl start` on seeds you craft, then `crs-coverage` to see what they reach and aim the next inputs at the gaps — but lead with targeted reasoning.
+When a bug is hard to reach by hand, you may also drive the libFuzzer campaign
+yourself with `crs-fuzz start` on seeds you craft, then use `crs-coverage` to
+see what it reaches and aim the next inputs at the gaps. Lead with targeted
+reasoning.
 
 ## Before saving a POV (MUST pass)
 - [ ] Ran the candidate via `libCRS run-pov`; `retcode` is non-zero (crash confirmed)

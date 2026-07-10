@@ -30,8 +30,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import queue
 import signal
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -212,14 +214,44 @@ def run_claude_p(
     assert proc.stdin is not None and proc.stdout is not None and proc.stderr is not None
 
     deadline = time.monotonic() + timeout if timeout else None
+    stream_events: queue.Queue[tuple[str, str | None]] = queue.Queue()
+
+    def read_stream(stream, stream_name: str) -> None:
+        try:
+            for line in iter(stream.readline, ""):
+                stream_events.put((stream_name, line))
+        finally:
+            stream_events.put((stream_name, None))
+
+    stdout_thread = threading.Thread(
+        target=read_stream, args=(proc.stdout, "stdout"), daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=read_stream, args=(proc.stderr, "stderr"), daemon=True
+    )
 
     try:
+        stdout_thread.start()
+        stderr_thread.start()
         proc.stdin.write(prompt)
         proc.stdin.close()
-
-        for line in proc.stdout:
+        open_streams = {"stdout", "stderr"}
+        while open_streams:
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise subprocess.TimeoutExpired(cmd, timeout)
+            try:
+                stream_name, line = stream_events.get(timeout=remaining)
+            except queue.Empty:
+                raise subprocess.TimeoutExpired(cmd, timeout) from None
+            if line is None:
+                open_streams.discard(stream_name)
+                continue
             if raw_log:
                 raw_log.write(line)
+            if stream_name != "stdout":
+                continue
+
             line = line.strip()
             if not line:
                 continue
@@ -241,10 +273,8 @@ def run_claude_p(
                 result.num_turns = event.get("num_turns")
                 result.total_cost_usd = event.get("total_cost_usd")
 
-            if deadline and time.monotonic() > deadline:
-                raise subprocess.TimeoutExpired(cmd, timeout)
-
-        proc.wait(timeout=deadline - time.monotonic() if deadline else None)
+        wait_timeout = None if deadline is None else max(0, deadline - time.monotonic())
+        proc.wait(timeout=wait_timeout)
         result.returncode = proc.returncode
     except subprocess.TimeoutExpired:
         logger.warning("claude -p timed out (%ds); killing process group", timeout)
@@ -252,17 +282,25 @@ def run_claude_p(
         result.is_error = True
         _kill_group(proc)
         result.returncode = proc.returncode
+    except (KeyboardInterrupt, SystemExit):
+        # The runner turns Docker SIGTERM into SystemExit so its outer finally
+        # can synchronously submit artifacts. Claude runs in a separate process
+        # group, so it must be reaped here before that finally can proceed.
+        _kill_group(proc)
+        raise
     except Exception as e:  # noqa: BLE001
         logger.error("Error running claude -p: %s", e)
         result.is_error = True
         _kill_group(proc)
     finally:
+        if proc.stdin:
+            proc.stdin.close()
+        if proc.poll() is not None:
+            stdout_thread.join(timeout=1)
+            stderr_thread.join(timeout=1)
         if proc.stdout:
             proc.stdout.close()
         if proc.stderr:
-            stderr = proc.stderr.read()
-            if stderr and raw_log:
-                raw_log.write(stderr)
             proc.stderr.close()
         if raw_log:
             raw_log.close()

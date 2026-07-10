@@ -20,7 +20,6 @@ BUILD_VARIANTS = {
     "asan": ("build", Path("/out")),
     "debug": ("debug", Path("/work/debug-build")),
     "coverage": ("coverage", Path("/work/coverage-build")),
-    "afl": ("afl", Path("/work/afl-build")),
 }
 
 # CodeQL database (a directory), submitted by the codeql-build phase under the
@@ -35,9 +34,8 @@ def have(cmd: str) -> bool:
 
 # --- CPU allocation ---------------------------------------------------------
 # The container is pinned to a core set via the compose `cpuset` (exposed as
-# OSS_CRS_CPUSET, e.g. "2-7"). We split it in half so the two fuzzing engines
-# don't contend: crs-fuzz (libFuzzer) gets the FIRST half, crs-afl (AFL++) the
-# SECOND half.
+# OSS_CRS_CPUSET, e.g. "2-7"). The production Finder uses the complete set for
+# libFuzzer. `split_cpus()` remains for upstream tutorial experiments only.
 def _parse_cpuset(s: str) -> list[int]:
     cpus: list[int] = []
     for part in s.split(","):

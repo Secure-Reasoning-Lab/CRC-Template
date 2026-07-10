@@ -33,7 +33,12 @@ from libCRS.cli.main import init_crs_utils
 
 from crs.src.claude_node import ClaudeCodeNode, ClaudeState, configure_claude_env
 from crs.src import prompts
-from crs.src.runtime import register_submit_dirs
+from crs.src.runtime import (
+    flush_submissions,
+    install_sigterm_handler,
+    register_submit_dirs,
+    require_supported_engine,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -198,49 +203,62 @@ def find_bugs(harness: str, source_dir: Path,
 
 def main() -> None:
     harness = harness_name()
+    # OSS-CRS currently parses supported_target but does not enforce it at run
+    # time. Keep this production entrypoint aligned with the manifest.
+    require_supported_engine()
     logger.info("Starting CRS: harness=%s language=%s sanitizer=%s", harness, LANGUAGE, SANITIZER)
     crs = init_crs_utils()
-
-    # 1. Fetch boot-time evidence (delta diff, seeds, bug-candidates).
-    diffs, seeds, bug_candidates = fetch_inputs(crs)
-
-    # 2. PoVs are submitted explicitly after the run (see below), not via a
-    #    watchdog daemon.
-    POV_OUT.mkdir(parents=True, exist_ok=True)
-
-    # 3. Persist agent logs to the host via LOG_DIR symlink.
+    install_sigterm_handler()
+    exit_error: BaseException | None = None
     try:
-        crs.register_log_dir(AGENT_WORK_DIR)
-    except Exception as e:  # noqa: BLE001
-        logger.warning("register_log_dir failed: %s", e)
-        AGENT_WORK_DIR.mkdir(parents=True, exist_ok=True)
+        # 1. Fetch boot-time evidence (delta diff, seeds, bug-candidates).
+        diffs, seeds, bug_candidates = fetch_inputs(crs)
 
-    # 4. Download build (harness binaries) and source.
-    try:
-        crs.download_build_output("build", OUT_DIR)
-        logger.info("Downloaded build outputs to %s", OUT_DIR)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to download build outputs: %s", e)
-        sys.exit(1)
+        # 2. The watcher allows live submission and early-exit detection. The
+        # finally block below synchronously flushes its last batch.
+        POV_OUT.mkdir(parents=True, exist_ok=True)
 
-    source_dir = setup_source(crs)
-    if source_dir is None:
-        sys.exit(1)
-    logger.info("Source directory: %s", source_dir)
+        # 3. Persist agent logs to the host via LOG_DIR symlink.
+        try:
+            crs.register_log_dir(AGENT_WORK_DIR)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("register_log_dir failed: %s", e)
+            AGENT_WORK_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 5. Configure Claude Code auth (OAuth token > LiteLLM proxy).
-    configure_claude_env(
-        {"llm_api_url": LLM_API_URL, "llm_api_key": LLM_API_KEY},
-        source_dir=source_dir,
-    )
+        # 4. Download build (harness binaries) and source.
+        try:
+            crs.download_build_output("build", OUT_DIR)
+            logger.info("Downloaded build outputs to %s", OUT_DIR)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Failed to download build outputs: %s", e)
+            sys.exit(1)
 
-    # 6. Register the PoV + seed dirs for auto-submission. libCRS's batch submitter
-    #    then submits anything the agent / its crs-fuzz writes to /artifacts/povs
-    #    and /artifacts/corpus/<harness> — no manual submission needed.
-    register_submit_dirs(crs, harness)
+        source_dir = setup_source(crs)
+        if source_dir is None:
+            sys.exit(1)
+        logger.info("Source directory: %s", source_dir)
 
-    # 7. Run the bug-finding node; PoVs and seeds auto-submit as they appear.
-    find_bugs(harness, source_dir, diffs, seeds, bug_candidates)
+        # 5. Configure Claude Code auth (OAuth token > LiteLLM proxy).
+        configure_claude_env(
+            {"llm_api_url": LLM_API_URL, "llm_api_key": LLM_API_KEY},
+            source_dir=source_dir,
+        )
+
+        # 6. Register live PoV + seed submission watchers.
+        register_submit_dirs(crs, harness)
+
+        # 7. Run the bug-finding node.
+        find_bugs(harness, source_dir, diffs, seeds, bug_candidates)
+    except BaseException as exc:
+        exit_error = exc
+        raise
+    finally:
+        try:
+            flush_submissions(crs, harness)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Final artifact submission failed: %s", exc)
+            if exit_error is None:
+                raise
 
 
 if __name__ == "__main__":

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crs-bug-finding-template"
+name = "crs-finder-claude-code"
 version = "1.0.0"
-description = "Build-your-own CRS template for oss-crs bug finding"
+description = "Claude Code bug-finding CRS for CRC-Template"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Team Atlanta" }]
@@ -19,7 +19,6 @@ dependencies = [
 [project.scripts]
 crs-coverage = "crs.tools.coverage:main"
 crs-fuzz = "crs.tools.fuzzer:main"
-crs-afl = "crs.tools.afl:main"
 crs-codeql = "crs.tools.codeql:main"
 
 [tool.setuptools.packages.find]

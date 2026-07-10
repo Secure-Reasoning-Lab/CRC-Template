@@ -32,8 +32,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from .common import (corpus_dir, require_harness, resolve_build_dir, run,
-                     seed_from_boot, set_affinity, split_cpus)
+from .common import (available_cpus, corpus_dir, require_harness,
+                     resolve_build_dir, run, seed_from_boot, set_affinity)
 
 # Where background-fuzzer pidfiles + logs live (one per harness).
 FUZZ_RUNDIR = Path(os.environ.get("CRS_FUZZ_RUNDIR", "/work/agent/fuzz"))
@@ -42,9 +42,8 @@ _CRASH_PREFIXES = ("crash", "oom", "timeout", "leak")
 
 
 def _fuzz_cpus() -> list[int]:
-    """The cores allotted to crs-fuzz (the first half of the cpuset; crs-afl gets
-    the second half)."""
-    return split_cpus()[0]
+    """Use the complete production CRS allocation for libFuzzer workers."""
+    return available_cpus() or [0]
 
 
 def _build_cmd(hb, corpus: Path, pov_out: Path, *, seconds: int, jobs: int,

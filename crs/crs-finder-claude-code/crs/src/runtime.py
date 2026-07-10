@@ -6,10 +6,10 @@ they only have to express their *orchestration*, not re-derive the boot sequence
 
 `boot()` performs the common prologue — fetch boot-time evidence, download the
 build + source, configure Claude Code auth, write the shared CLAUDE.md, install
-the runner-tool skills, and register the PoV/seed dirs for auto-submission — and
-returns a `RunContext`. PoVs and seeds are submitted automatically by libCRS's
-batch submitter (register-submit-dir) as the fuzzer/agent write them; entrypoints
-do not submit by hand.
+the runner-tool skills, and register the PoV/seed dirs for live submission — and
+returns a `RunContext`. Entrypoints must also call `flush_submissions()` from a
+`finally` block: libCRS watchers batch asynchronously and cannot guarantee that
+the last files survive a normal exit or SIGTERM.
 
 Mount points (oss-crs convention): /out build, /src source, /work scratch,
 /artifacts persisted outputs.
@@ -88,6 +88,58 @@ def list_files(d: Path, *, non_empty_only: bool = False) -> list[Path]:
     if not non_empty_only:
         return files
     return [f for f in files if f.read_text(errors="replace").strip()]
+
+
+def submit_data_files(crs, data_type: DataType, directory: Path) -> list[Path]:
+    """Synchronously submit every non-empty regular file under ``directory``.
+
+    ``register_submit_dir()`` is intentionally retained for live exchange and
+    early-exit observation, but its daemon watcher flushes on a timer. This
+    direct submit path is the durable exit-time fallback. libCRS content-hash
+    deduplication makes submitting a file already handled by the watcher safe.
+    """
+    submitted: list[Path] = []
+    failures: list[tuple[Path, Exception]] = []
+    for path in list_files(directory):
+        try:
+            if path.stat().st_size == 0:
+                continue
+            crs.submit(data_type, path)
+            submitted.append(path)
+        except Exception as exc:  # noqa: BLE001
+            failures.append((path, exc))
+            logger.exception("Failed to submit %s artifact %s", data_type.value, path)
+
+    if failures:
+        failed_paths = ", ".join(str(path) for path, _ in failures)
+        raise RuntimeError(
+            f"Failed to submit {len(failures)} {data_type.value} artifact(s): {failed_paths}"
+        )
+    if submitted:
+        logger.info(
+            "Synchronously submitted %d %s artifact(s) from %s",
+            len(submitted),
+            data_type.value,
+            directory,
+        )
+    return submitted
+
+
+def flush_submissions(crs, harness: str) -> None:
+    """Synchronously submit remaining PoVs and seeds before an entrypoint exits."""
+    from crs.tools.common import corpus_dir  # local import: avoids an import cycle
+
+    failures: list[Exception] = []
+    for data_type, directory in (
+        (DataType.POV, POV_OUT),
+        (DataType.SEED, corpus_dir(harness)),
+    ):
+        try:
+            submit_data_files(crs, data_type, directory)
+        except Exception as exc:  # noqa: BLE001
+            failures.append(exc)
+    if failures:
+        raise RuntimeError("; ".join(str(exc) for exc in failures))
 
 
 def fetch_inputs(crs) -> tuple[list[Path], list[Path], list[Path]]:
@@ -187,9 +239,20 @@ def install_sigterm_handler() -> None:
     signal.signal(signal.SIGTERM, _raise)
 
 
+def require_supported_engine() -> None:
+    """Fail fast when OSS-CRS runs this libFuzzer-only CRS on another engine."""
+    engine = os.environ.get("FUZZING_ENGINE", "libfuzzer")
+    if engine != "libfuzzer":
+        raise SystemExit(
+            "[crs.runtime] crs-finder-claude-code supports only "
+            f"FUZZING_ENGINE=libfuzzer, got {engine!r}"
+        )
+
+
 def boot() -> RunContext:
     """Common prologue: evidence + build + source + auth + CLAUDE.md + skills."""
     harness = harness_name()
+    require_supported_engine()
     logger.info("Starting CRS: harness=%s language=%s sanitizer=%s",
                 harness, LANGUAGE, SANITIZER)
     # Container runs as root; umask 0 makes every file/dir it (and the claude
