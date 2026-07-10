@@ -89,6 +89,6 @@ def test_run_does_not_pass_debug_file_flag(monkeypatch, tmp_path: Path) -> None:
     assert produced is False
     assert len(popen_calls) == 1
     cmd = popen_calls[0]
-    assert cmd[:3] == ["claude", "-p", "--dangerously-skip-permissions"]
+    assert cmd[:4] == ["claude", "-p", "--verbose", "--dangerously-skip-permissions"]
     assert "--append-system-prompt" in cmd
     assert "--debug-file" not in cmd

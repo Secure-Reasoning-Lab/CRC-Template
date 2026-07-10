@@ -3,6 +3,6 @@ revision = 3
 requires-python = ">=3.10"
 
 [[package]]
-name = "crs-claude-code"
+name = "crs-patcher-claude-code"
 version = "1.0.0"
 source = { editable = "." }

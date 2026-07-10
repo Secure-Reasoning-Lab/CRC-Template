@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crs-claude-code"
+name = "crs-patcher-claude-code"
 version = "1.0.0"
-description = "CRS using Claude Code CLI for autonomous vulnerability patching"
+description = "Claude Code vulnerability patching CRS for CRC-Template"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Team Atlanta"}]
