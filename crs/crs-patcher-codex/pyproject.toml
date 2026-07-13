@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crs-codex"
+name = "crs-patcher-codex"
 version = "1.0.0"
-description = "CRS using Codex CLI for autonomous vulnerability patching"
+description = "Codex vulnerability patching CRS for CRC-Template"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Team Atlanta"}]

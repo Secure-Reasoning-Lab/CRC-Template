@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crs-bug-finding-codex"
+name = "crs-finder-codex"
 version = "1.0.0"
-description = "CRS using Codex CLI for autonomous vulnerability discovery"
+description = "Codex vulnerability discovery CRS for CRC-Template"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = []

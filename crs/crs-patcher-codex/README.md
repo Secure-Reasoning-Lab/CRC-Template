@@ -1,4 +1,10 @@
-# crs-codex
+# crs-patcher-codex
+
+This is the `CRC-Template` integration of Team Atlanta's `crs-codex`. Its Git
+history is preserved, while the local CRS/package and base-image names are
+isolated under `crs-patcher-codex`. Upstream example compose and LiteLLM files
+are retained as reference material; outer OSS-CRS or CRSBench configuration
+owns deployment and model routing.
 
 A [CRS](https://github.com/oss-crs) (Cyber Reasoning System) that uses [Codex CLI](https://developers.openai.com/codex/overview) to autonomously find and patch vulnerabilities in open-source projects.
 

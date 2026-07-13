@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-bug-finding-codex Docker Bake Configuration
+# CRC-Template Codex Finder Docker Bake Configuration
 # =============================================================================
 #
 # Builds the CRS base image with Codex CLI and Python dependencies.
@@ -10,7 +10,8 @@
 # =============================================================================
 
 variable "REGISTRY" {
-  default = "ghcr.io/team-atlanta"
+  # Fail safely on accidental publish unless an owned registry is supplied.
+  default = "localhost"
 }
 
 variable "VERSION" {
@@ -39,17 +40,17 @@ group "default" {
 }
 
 group "prepare" {
-  targets = ["codex-bug-finding-base"]
+  targets = ["crs-finder-codex-base"]
 }
 
 # -----------------------------------------------------------------------------
 # Base Image
 # -----------------------------------------------------------------------------
 
-target "codex-bug-finding-base" {
+target "crs-finder-codex-base" {
   context    = "."
   dockerfile = "oss-crs/base.Dockerfile"
-  tags       = tags("codex-bug-finding-base")
+  tags       = tags("crs-finder-codex-base")
   args = {
     CODEX_CLI_VERSION = CODEX_CLI_VERSION
   }

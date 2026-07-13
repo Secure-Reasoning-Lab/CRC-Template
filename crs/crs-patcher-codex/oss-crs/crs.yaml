@@ -1,8 +1,10 @@
-name: crs-codex
+name: crs-patcher-codex
 type:
   - bug-fixing
 version: 1.0.0
-docker_registry: ghcr.io/team-atlanta/crs-codex
+# Local Template default. Set an explicit registry only when this derived CRS
+# is intentionally published under a namespace you control.
+docker_registry: local
 
 prepare_phase:
   hcl: oss-crs/docker-bake.hcl

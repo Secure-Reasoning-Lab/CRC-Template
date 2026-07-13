@@ -1,4 +1,4 @@
-# Codex CRS (bug-finding) base image (prepare phase)
+# CRC-Template Codex Finder base image (prepare phase)
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive

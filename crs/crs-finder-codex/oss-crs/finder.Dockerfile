@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-bug-finding-codex Finder Module
+# CRC-Template Codex Finder Module
 # =============================================================================
 # RUN phase: Analyzes source code and crafts POV inputs using Codex.
 #
@@ -10,17 +10,17 @@
 ARG target_base_image
 ARG crs_version
 
-FROM codex-bug-finding-base
+FROM crs-finder-codex-base
 
 # Install libCRS (CLI + Python package)
 COPY --from=libcrs . /libCRS
 RUN pip3 install /libCRS \
     && python3 -c "from libCRS.base import DataType; print('libCRS OK')"
 
-# Install crs-bug-finding-codex package (finder + agents)
-COPY pyproject.toml /opt/crs-bug-finding-codex/pyproject.toml
-COPY finder.py /opt/crs-bug-finding-codex/finder.py
-COPY agents/ /opt/crs-bug-finding-codex/agents/
-RUN pip3 install /opt/crs-bug-finding-codex
+# Install the Finder package and agents.
+COPY pyproject.toml /opt/crs-finder-codex/pyproject.toml
+COPY finder.py /opt/crs-finder-codex/finder.py
+COPY agents/ /opt/crs-finder-codex/agents/
+RUN pip3 install /opt/crs-finder-codex
 
 CMD ["run_finder"]

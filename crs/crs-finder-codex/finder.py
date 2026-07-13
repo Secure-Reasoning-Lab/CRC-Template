@@ -1,5 +1,5 @@
 """
-crs-bug-finding-codex finder module.
+crs-finder-codex finder module.
 
 Thin launcher that delegates vulnerability discovery to a swappable AI agent.
 The agent (selected via CRS_AGENT env var) handles: source analysis, input
@@ -82,9 +82,9 @@ def setup_source() -> Path | None:
             [
                 "git",
                 "-c",
-                "user.name=crs-bug-finding-codex",
+                "user.name=crs-finder-codex",
                 "-c",
-                "user.email=crs-bug-finding-codex@local",
+                "user.email=crs-finder-codex@local",
                 "commit",
                 "-m",
                 "initial source",

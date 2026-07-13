@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-bug-finding-codex Builder Dockerfile
+# CRC-Template Codex Finder Builder Dockerfile
 # =============================================================================
 # BUILD phase: Compiles the target project and submits build outputs.
 # =============================================================================

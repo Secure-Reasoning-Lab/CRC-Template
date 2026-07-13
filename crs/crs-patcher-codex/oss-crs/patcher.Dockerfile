@@ -1,5 +1,5 @@
 # =============================================================================
-# crs-codex Patcher Module
+# CRC-Template Codex Patcher Module
 # =============================================================================
 # RUN phase: Receives POVs, generates patches using Codex,
 # tests them using the snapshot image for incremental rebuilds.
@@ -11,17 +11,17 @@
 ARG target_base_image
 ARG crs_version
 
-FROM codex-base
+FROM crs-patcher-codex-base
 
 # Install libCRS (CLI + Python package)
 COPY --from=libcrs . /libCRS
 RUN pip3 install /libCRS \
     && python3 -c "from libCRS.base import DataType; print('libCRS OK')"
 
-# Install crs-codex package (patcher + agents)
-COPY pyproject.toml /opt/crs-codex/pyproject.toml
-COPY patcher.py /opt/crs-codex/patcher.py
-COPY agents/ /opt/crs-codex/agents/
-RUN pip3 install /opt/crs-codex
+# Install the Patcher package and agents.
+COPY pyproject.toml /opt/crs-patcher-codex/pyproject.toml
+COPY patcher.py /opt/crs-patcher-codex/patcher.py
+COPY agents/ /opt/crs-patcher-codex/agents/
+RUN pip3 install /opt/crs-patcher-codex
 
 CMD ["run_patcher"]

@@ -1,5 +1,5 @@
 """
-crs-codex patcher module.
+crs-patcher-codex patcher module.
 
 Thin launcher that delegates vulnerability fixing to a swappable AI agent.
 The agent (selected via CRS_AGENT env var) handles: bug analysis, code editing,
@@ -293,9 +293,9 @@ def setup_source() -> Path | None:
             [
                 "git",
                 "-c",
-                "user.name=crs-codex",
+                "user.name=crs-patcher-codex",
                 "-c",
-                "user.email=crs-codex@local",
+                "user.email=crs-patcher-codex@local",
                 "commit",
                 "-m",
                 "initial source",

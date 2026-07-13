@@ -87,3 +87,64 @@ git diff 42fb600..HEAD -- crs/crs-patcher-claude-code
 The root-level Finder-to-Patcher orchestration lives outside either imported
 tree, so upstream updates can be evaluated independently of Template workflow
 changes.
+
+## Codex Finder
+
+The Codex Finder at `crs/crs-finder-codex/` was imported from:
+
+```text
+https://github.com/Team-Atlanta/crs-bug-finding-codex
+```
+
+The imported upstream revision is:
+
+```text
+66d2ca60573fdf84dd9b3325cdb574abfcd767bd
+```
+
+It was integrated by the Git subtree merge commit:
+
+```text
+a0a81f7b6ed63271f6877403ef3f912d7e8da44a
+```
+
+That merge records `git-subtree-dir: crs/crs-finder-codex` and keeps the
+complete Team Atlanta history as its second-parent chain. Local adaptation is
+limited to the Template CRS/package identity, local-only image namespace,
+base-image isolation, and integration documentation. Upstream example compose
+configuration remains unchanged.
+
+The upstream `pyproject.toml` declares an MIT license but the imported revision
+does not contain a standalone `LICENSE` file. Preserve Team Atlanta attribution
+and confirm the complete redistribution license record before publishing this
+derived Finder.
+
+## Codex Patcher
+
+The Codex Patcher at `crs/crs-patcher-codex/` was imported from:
+
+```text
+https://github.com/Team-Atlanta/crs-codex
+```
+
+The imported upstream revision is:
+
+```text
+cb1b0d939832f56bdc8f74f4c9ab450d158833c6
+```
+
+It was integrated by the Git subtree merge commit:
+
+```text
+1d849a0ddb7e9de1d7320b1f42264c5c12b52c9c
+```
+
+That merge records `git-subtree-dir: crs/crs-patcher-codex` and keeps the
+complete Team Atlanta history as its second-parent chain. Local adaptation
+matches the Finder boundary: Template identity and safe local image names are
+changed, while upstream example compose and LiteLLM configuration are retained.
+
+The Patcher includes Team Atlanta's MIT `LICENSE`; keep it with derived copies.
+Its upstream release tags use the same generic names as the previously imported
+Claude Patcher tags, so the unambiguous remote branch and commit hash above are
+the provenance authorities in this repository.

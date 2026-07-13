@@ -1,4 +1,4 @@
-# Codex CRS base image (prepare phase)
+# CRC-Template Codex Patcher base image (prepare phase)
 FROM python:3.12-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
