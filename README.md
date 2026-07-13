@@ -20,9 +20,8 @@ crs/crs-patcher-codex
 ```
 
 All four CRSes are imported with their Team Atlanta Git histories preserved
-through non-squashed `git subtree` merges. The checked-in root wrappers and
-deployment configs currently exercise the Claude workflow; Codex deployment
-and model routing can be supplied by outer OSS-CRS or CRSBench configuration.
+through non-squashed `git subtree` merges. The checked-in root wrappers cover
+the Claude OSS-CRS staging workflow and the Codex CRSBench smoke workflow.
 
 ## Prerequisites
 
@@ -66,11 +65,11 @@ Initialize the framework and inspect the local machine:
 ./scripts/setup.sh
 ```
 
-`./scripts/setup.sh --check` does not alter submodule state. It validates both
-LiteLLM and OAuth compose/manifests without Docker, then reports missing runtime
-prerequisites. Each compose uses a relative `source.local_path`; all root
-scripts change to the repository root before calling OSS-CRS so that path is
-stable.
+`./scripts/setup.sh --check` does not alter submodule state. It validates the
+Claude LiteLLM/OAuth and Codex compose/manifests without Docker, then reports
+missing runtime prerequisites. Each compose uses a relative `source.local_path`;
+all root scripts change to the repository root before calling OSS-CRS so that
+path is stable.
 
 ## Claude End-To-End Run
 
@@ -114,6 +113,39 @@ submissions/<target>/e2e-<e2e-id>/
 ```
 
 It is an implementation artifact, not a CRSBench result.
+
+## Codex CRSBench End-To-End Smoke
+
+Run the Codex Finder/Patcher chain through CRSBench against the checked-in
+sanity delta benchmark:
+
+```bash
+./scripts/run-codex-e2e.sh
+```
+
+By default the wrapper uses `../CRC-Evaluate`, benchmark
+`sanity-mock-c-delta-01`, harness `fuzz_parse_buffer_section`, and
+`delta/address` mode. It generates a temporary CRSBench registry and two
+experiment configs under:
+
+```text
+generated/crsbench-codex-smoke/<run-id>/
+```
+
+The wrapper runs Finder, independently checks that `crsbench verify` matches
+`cpv_1`, feeds the Finder experiment subtree into Patcher with
+`runtime.inputs.pov.from_experiment_by_crs`, and independently checks that
+`crsbench patch-verify` reports a valid `cpv_1` fix. It sources the ignored
+root `.env` and maps `CRC_LITELLM_UPSTREAM_BASE_URL/API_KEY` to CRSBench's
+`CRSBENCH_LLM_UPSTREAM_BASE_URL/API_KEY` variables without writing secrets into
+generated YAML.
+
+Useful development flags:
+
+```bash
+./scripts/run-codex-e2e.sh --config-only --run-id codex-preflight-001
+./scripts/run-codex-e2e.sh --crsbench-root /path/to/CRC-Evaluate --run-id codex-smoke-001
+```
 
 ## Finder Run
 

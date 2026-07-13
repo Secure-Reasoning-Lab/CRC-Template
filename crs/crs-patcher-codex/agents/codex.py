@@ -16,7 +16,7 @@ from pathlib import Path
 
 logger = logging.getLogger("agent.codex")
 
-_raw_model = os.environ.get("CODEX_MODEL", "gpt-5.6-sol").strip()
+_raw_model = os.environ.get("CODEX_MODEL", "gpt-5.5").strip()
 CODEX_MODEL = _raw_model.removeprefix("openai/").removeprefix("anthropic/")
 CODEX_MODEL_REASONING_EFFORT = os.environ.get(
     "CODEX_MODEL_REASONING_EFFORT", "xhigh"

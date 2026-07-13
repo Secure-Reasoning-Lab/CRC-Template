@@ -23,7 +23,7 @@ crs_run_phase:
       # Default values. To override, set additional_env in compose yaml.
       CRS_AGENT: codex
       # CODEX_CLI_VERSION: "0.144.3"  # Optional prepare-phase override for base image build
-      # CODEX_MODEL: gpt-5.6-sol  # Optional override (default if unset)
+      # CODEX_MODEL: gpt-5.5  # Optional override (default if unset)
       # CODEX_MODEL_REASONING_EFFORT: xhigh  # Optional override (default if unset)
       # AGENT_TIMEOUT: "0"  # seconds, 0 = no limit (default)
 
@@ -41,5 +41,5 @@ supported_target:
     - x86_64
 
 required_llms:
-  - gpt-5.6-sol
+  - gpt-5.5
   # Codex variants currently expose canonical IDs without dated snapshot suffixes.

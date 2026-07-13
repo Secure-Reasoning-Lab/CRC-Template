@@ -105,7 +105,7 @@ crs-codex:
   llm_budget: 10
   additional_env:
     CRS_AGENT: codex
-    CODEX_MODEL: gpt-5.6-sol
+    CODEX_MODEL: gpt-5.5
     CODEX_MODEL_REASONING_EFFORT: xhigh
 
 llm_config:
@@ -132,7 +132,7 @@ crs-compose up -f crs-compose.yaml
 | Environment variable | Default | Description |
 |---|---|---|
 | `CRS_AGENT` | `codex` | Agent module name (maps to `agents/<name>.py`) |
-| `CODEX_MODEL` | `gpt-5.6-sol` | Model passed to `codex exec --model` |
+| `CODEX_MODEL` | `gpt-5.5` | Model passed to `codex exec --model` |
 | `CODEX_MODEL_REASONING_EFFORT` | `xhigh` | Reasoning effort written to Codex `config.toml` |
 | `AGENT_TIMEOUT` | `0` (no limit) | Agent timeout in seconds (0 = run until budget exhausted) |
 

@@ -30,6 +30,6 @@ targets with the address sanitizer on x86-64.
 ## Defaults
 
 The prepared image pins `@openai/codex` to `0.144.3`. The agent defaults to
-`gpt-5.6-sol` with `model_reasoning_effort = "xhigh"`. Override these with
+`gpt-5.5` with `model_reasoning_effort = "xhigh"`. Override these with
 `CODEX_CLI_VERSION`, `CODEX_MODEL`, or `CODEX_MODEL_REASONING_EFFORT` in the
 CRS compose configuration when a run requires different values.

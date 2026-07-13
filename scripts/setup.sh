@@ -9,7 +9,7 @@ usage() {
 Usage: scripts/setup.sh [--check]
 
 Initializes the oss-crs submodule when needed and checks the local prerequisites
-for the Claude Code Finder/Patcher workflow. --check never changes submodule
+for the checked-in Finder/Patcher workflows. --check never changes submodule
 state.
 EOF
 }
@@ -89,6 +89,8 @@ checks = (
     ("patcher-claude-code-litellm.yaml", "crs-patcher-claude-code"),
     ("finder-claude-code.yaml", "crs-finder-claude-code"),
     ("patcher-claude-code.yaml", "crs-patcher-claude-code"),
+    ("finder-codex.yaml", "crs-finder-codex"),
+    ("patcher-codex.yaml", "crs-patcher-codex"),
 )
 
 # This validates both local CRS roots and manifests without cloning, Docker, or
@@ -102,10 +104,10 @@ for compose_name, crs_name in checks:
             compose_file, Path(work_dir), skip_crs_init=True
         )
 
-print("Finder and Patcher LiteLLM/OAuth compose/manifests parse successfully.")
+print("Finder and Patcher compose/manifests parse successfully.")
 PY
     then
-      note_ok 'Finder and Patcher LiteLLM/OAuth compose/manifest static checks passed.'
+      note_ok 'Finder and Patcher compose/manifest static checks passed.'
     else
       note_error 'Finder or Patcher compose/manifest static check failed.'
     fi
@@ -133,7 +135,7 @@ fi
 if command -v nproc >/dev/null 2>&1; then
   cpu_count="$(nproc)"
   if ((cpu_count < 8)); then
-    note_warn "The default Claude compose names CPUs 0-7, but nproc reports ${cpu_count}. Adjust the Claude compose files before running."
+    note_warn "The default compose allocation names CPUs 0-7, but nproc reports ${cpu_count}. Adjust the compose files before running."
   else
     note_ok "CPU check: ${cpu_count} logical CPUs available to this shell."
   fi
@@ -153,11 +155,11 @@ elif [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" || -n "${CRC_LITELLM_UPSTREAM_AP
 elif [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
   note_warn 'Only CLAUDE_CODE_OAUTH_TOKEN is available. Use --auth-mode oauth with the OAuth compose files.'
 else
-  note_warn 'No LiteLLM upstream credentials or Claude OAuth token were found. Claude Finder/Patcher runs will fail before prepare/build.'
+  note_warn 'No LiteLLM upstream credentials or Claude OAuth token were found. Finder/Patcher runs will fail before prepare/build.'
 fi
 
 if ((status != 0)); then
   exit "$status"
 fi
 
-printf 'Setup checks passed. Use scripts/run-claude-e2e.sh for the staged Claude workflow.\n'
+printf 'Setup checks passed. Use scripts/run-claude-e2e.sh for OSS-CRS Claude staging or scripts/run-codex-e2e.sh for CRSBench Codex smoke testing.\n'

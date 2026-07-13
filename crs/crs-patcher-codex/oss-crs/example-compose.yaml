@@ -25,7 +25,7 @@ crs-codex:
     # Optional prepare-phase CLI pin:
     #   CODEX_CLI_VERSION: 0.144.3
     CRS_AGENT: codex
-    CODEX_MODEL: gpt-5.6-sol
+    CODEX_MODEL: gpt-5.5
     CODEX_MODEL_REASONING_EFFORT: xhigh
     # AGENT_TIMEOUT: "3600"                          # Optional: seconds, 0 = no limit (default)
 
