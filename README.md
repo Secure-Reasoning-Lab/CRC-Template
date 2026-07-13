@@ -11,9 +11,18 @@ crs/crs-finder-claude-code
 crs/crs-patcher-claude-code
 ```
 
-The Finder and Patcher are imported with their Team Atlanta Git histories
-preserved through `git subtree` merges. The Codex directories remain
-placeholders.
+The equivalent Codex CRS sources are also integrated:
+
+```text
+crs/crs-finder-codex
+            -> submitted PoVs
+crs/crs-patcher-codex
+```
+
+All four CRSes are imported with their Team Atlanta Git histories preserved
+through non-squashed `git subtree` merges. The checked-in root wrappers and
+deployment configs currently exercise the Claude workflow; Codex deployment
+and model routing can be supplied by outer OSS-CRS or CRSBench configuration.
 
 ## Prerequisites
 
