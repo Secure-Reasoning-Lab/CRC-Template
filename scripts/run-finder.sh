@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-DEFAULT_COMPOSE_FILE="$ROOT/configs/finder-claude-code-litellm.yaml"
+DEFAULT_COMPOSE_FILE="$ROOT/configs/finder-claude-code.yaml"
 DEFAULT_WORK_DIR="$ROOT/generated/oss-crs-work"
 
 usage() {
@@ -31,7 +31,7 @@ Options:
   --auth-mode MODE            litellm (default) or oauth
   --skip-prepare              Skip oss-crs prepare
   --skip-build                Reuse an existing --build-id; errors if it is omitted
-  --compose-file FILE         Compose file (default: configs/finder-claude-code-litellm.yaml)
+  --compose-file FILE         Compose file (default: configs/finder-claude-code.yaml)
   --work-dir DIR              OSS-CRS work directory (default: generated/oss-crs-work)
   -h, --help                  Show this help
 

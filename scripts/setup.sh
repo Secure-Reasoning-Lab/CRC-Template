@@ -85,8 +85,6 @@ from oss_crs.src.crs_compose import CRSCompose
 import tempfile
 root = Path(sys.argv[1])
 checks = (
-    ("finder-claude-code-litellm.yaml", "crs-finder-claude-code"),
-    ("patcher-claude-code-litellm.yaml", "crs-patcher-claude-code"),
     ("finder-claude-code.yaml", "crs-finder-claude-code"),
     ("patcher-claude-code.yaml", "crs-patcher-claude-code"),
     ("finder-codex.yaml", "crs-finder-codex"),

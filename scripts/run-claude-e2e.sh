@@ -6,8 +6,8 @@ cd "$ROOT"
 
 FINDER_NAME="crs-finder-claude-code"
 PATCHER_NAME="crs-patcher-claude-code"
-DEFAULT_FINDER_COMPOSE_FILE="$ROOT/configs/finder-claude-code-litellm.yaml"
-DEFAULT_PATCHER_COMPOSE_FILE="$ROOT/configs/patcher-claude-code-litellm.yaml"
+DEFAULT_FINDER_COMPOSE_FILE="$ROOT/configs/finder-claude-code.yaml"
+DEFAULT_PATCHER_COMPOSE_FILE="$ROOT/configs/patcher-claude-code.yaml"
 DEFAULT_WORK_ROOT="$ROOT/generated/oss-crs-work"
 
 usage() {
@@ -44,8 +44,8 @@ Stage options:
   --finder-build-id ID        Finder build ID (generated when omitted)
   --patcher-run-id ID         Patcher run ID (generated when omitted)
   --patcher-build-id ID       Patcher build ID (generated when omitted)
-  --finder-compose-file FILE  Finder compose (default: configs/finder-claude-code-litellm.yaml)
-  --patcher-compose-file FILE Patcher compose (default: configs/patcher-claude-code-litellm.yaml)
+  --finder-compose-file FILE  Finder compose (default: configs/finder-claude-code.yaml)
+  --patcher-compose-file FILE Patcher compose (default: configs/patcher-claude-code.yaml)
   --finder-work-dir DIR       Finder work directory (default: generated/oss-crs-work/finder-claude-code)
   --patcher-work-dir DIR      Patcher work directory (default: generated/oss-crs-work/patcher-claude-code)
   --e2e-id ID                 Local run label (generated when omitted)

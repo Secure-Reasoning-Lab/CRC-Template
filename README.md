@@ -51,11 +51,13 @@ the OpenAI Responses API internally. The upstream must support `/v1/responses`
 with streaming function calls and `function_call_output`; do not add
 `response_format` or change Claude Code to an OpenAI endpoint directly.
 
-OAuth remains available as an explicit fallback. Set
-`CLAUDE_CODE_OAUTH_TOKEN`, select `--auth-mode oauth`, and pass the original
-`configs/finder-claude-code.yaml` and `configs/patcher-claude-code.yaml` files.
-The LiteLLM wrappers deliberately clear OAuth so an inherited token cannot
-bypass the proxy.
+OAuth remains available as an explicit fallback in the same two canonical
+Claude compose files. Comment out the complete `llm_config` block in
+`configs/finder-claude-code.yaml` and `configs/patcher-claude-code.yaml`, set
+`CLAUDE_CODE_OAUTH_TOKEN`, and select `--auth-mode oauth`. In this mode OSS-CRS
+does not enforce the compose `llm_budget`; configure an account-side spending
+limit instead. The LiteLLM wrappers deliberately clear OAuth so an inherited
+token cannot bypass the proxy.
 
 ## Setup
 
@@ -66,10 +68,10 @@ Initialize the framework and inspect the local machine:
 ```
 
 `./scripts/setup.sh --check` does not alter submodule state. It validates the
-Claude LiteLLM/OAuth and Codex compose/manifests without Docker, then reports
-missing runtime prerequisites. Each compose uses a relative `source.local_path`;
-all root scripts change to the repository root before calling OSS-CRS so that
-path is stable.
+four canonical Claude/Codex compose files and manifests without Docker, then
+reports missing runtime prerequisites. Each compose uses a relative
+`source.local_path`; all root scripts change to the repository root before
+calling OSS-CRS so that path is stable.
 
 ## Claude End-To-End Run
 
