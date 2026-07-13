@@ -304,7 +304,9 @@ def run(
 
     system_prompt = (
         f"You are an expert security engineer and software developer fixing a {sanitizer} vulnerability in `{target}` ({language}). "
-        "Read and follow CLAUDE.md."
+        "Read and follow CLAUDE.md. This is a non-interactive patching run: "
+        "do not enter Plan Mode or request approval; implement, validate, and "
+        "submit the final patch in this session."
     )
 
     cmd = [
@@ -312,6 +314,9 @@ def run(
         "-p",
         "--verbose",
         "--dangerously-skip-permissions",
+        "--disallowedTools",
+        "EnterPlanMode",
+        "ExitPlanMode",
         "--output-format", "stream-json",
         "--append-system-prompt", system_prompt,
     ]

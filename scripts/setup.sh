@@ -49,6 +49,10 @@ note_error() {
   status=1
 }
 
+source "$ROOT/scripts/load-local-env.sh"
+load_litellm_upstream_env "$ROOT"
+load_claude_oauth_env "$ROOT"
+
 if ! command -v git >/dev/null 2>&1; then
   note_error 'git is required to initialize and inspect the oss-crs submodule.'
 fi
@@ -81,6 +85,8 @@ from oss_crs.src.crs_compose import CRSCompose
 import tempfile
 root = Path(sys.argv[1])
 checks = (
+    ("finder-claude-code-litellm.yaml", "crs-finder-claude-code"),
+    ("patcher-claude-code-litellm.yaml", "crs-patcher-claude-code"),
     ("finder-claude-code.yaml", "crs-finder-claude-code"),
     ("patcher-claude-code.yaml", "crs-patcher-claude-code"),
 )
@@ -96,10 +102,10 @@ for compose_name, crs_name in checks:
             compose_file, Path(work_dir), skip_crs_init=True
         )
 
-print("Finder and Patcher compose/manifests parse successfully.")
+print("Finder and Patcher LiteLLM/OAuth compose/manifests parse successfully.")
 PY
     then
-      note_ok 'Finder and Patcher compose/manifest static checks passed.'
+      note_ok 'Finder and Patcher LiteLLM/OAuth compose/manifest static checks passed.'
     else
       note_error 'Finder or Patcher compose/manifest static check failed.'
     fi
@@ -140,12 +146,14 @@ if [[ -r /proc/meminfo ]]; then
   fi
 fi
 
-if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-  note_ok 'CLAUDE_CODE_OAUTH_TOKEN is exported.'
-elif [[ -f "$ROOT/.env" ]] && rg -q '^[[:space:]]*(export[[:space:]]+)?CLAUDE_CODE_OAUTH_TOKEN=.+$' "$ROOT/.env"; then
-  note_ok 'CLAUDE_CODE_OAUTH_TOKEN is present in root .env.'
+if [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" && -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]]; then
+  note_ok 'LiteLLM upstream URL and API key are available for the default workflow.'
+elif [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" || -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]]; then
+  note_warn 'LiteLLM mode needs both CRC_LITELLM_UPSTREAM_BASE_URL and CRC_LITELLM_UPSTREAM_API_KEY.'
+elif [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+  note_warn 'Only CLAUDE_CODE_OAUTH_TOKEN is available. Use --auth-mode oauth with the OAuth compose files.'
 else
-  note_warn 'CLAUDE_CODE_OAUTH_TOKEN is absent. Claude Finder/Patcher runs will fail before prepare/build.'
+  note_warn 'No LiteLLM upstream credentials or Claude OAuth token were found. Claude Finder/Patcher runs will fail before prepare/build.'
 fi
 
 if ((status != 0)); then

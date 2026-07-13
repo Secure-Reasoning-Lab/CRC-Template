@@ -6,8 +6,8 @@ cd "$ROOT"
 
 FINDER_NAME="crs-finder-claude-code"
 PATCHER_NAME="crs-patcher-claude-code"
-DEFAULT_FINDER_COMPOSE_FILE="$ROOT/configs/finder-claude-code.yaml"
-DEFAULT_PATCHER_COMPOSE_FILE="$ROOT/configs/patcher-claude-code.yaml"
+DEFAULT_FINDER_COMPOSE_FILE="$ROOT/configs/finder-claude-code-litellm.yaml"
+DEFAULT_PATCHER_COMPOSE_FILE="$ROOT/configs/patcher-claude-code-litellm.yaml"
 DEFAULT_WORK_ROOT="$ROOT/generated/oss-crs-work"
 
 usage() {
@@ -39,12 +39,13 @@ Stage options:
   --patcher-timeout SECONDS   Patcher timeout (default: 3600)
   --finder-early-exit         Stop Finder after its first submitted PoV
   --patcher-early-exit        Stop Patcher after its first submitted patch
+  --auth-mode MODE            litellm (default) or oauth for both stages
   --finder-run-id ID          Finder run ID (generated when omitted)
   --finder-build-id ID        Finder build ID (generated when omitted)
   --patcher-run-id ID         Patcher run ID (generated when omitted)
   --patcher-build-id ID       Patcher build ID (generated when omitted)
-  --finder-compose-file FILE  Finder compose (default: configs/finder-claude-code.yaml)
-  --patcher-compose-file FILE Patcher compose (default: configs/patcher-claude-code.yaml)
+  --finder-compose-file FILE  Finder compose (default: configs/finder-claude-code-litellm.yaml)
+  --patcher-compose-file FILE Patcher compose (default: configs/patcher-claude-code-litellm.yaml)
   --finder-work-dir DIR       Finder work directory (default: generated/oss-crs-work/finder-claude-code)
   --patcher-work-dir DIR      Patcher work directory (default: generated/oss-crs-work/patcher-claude-code)
   --e2e-id ID                 Local run label (generated when omitted)
@@ -88,6 +89,7 @@ FINDER_TIMEOUT="3600"
 PATCHER_TIMEOUT="3600"
 FINDER_EARLY_EXIT=false
 PATCHER_EARLY_EXIT=false
+AUTH_MODE="litellm"
 FINDER_COMPOSE_FILE="$DEFAULT_FINDER_COMPOSE_FILE"
 PATCHER_COMPOSE_FILE="$DEFAULT_PATCHER_COMPOSE_FILE"
 FINDER_WORK_DIR="$DEFAULT_WORK_ROOT/finder-claude-code"
@@ -156,6 +158,11 @@ while (($#)); do
       ;;
     --patcher-early-exit)
       PATCHER_EARLY_EXIT=true
+      ;;
+    --auth-mode)
+      (($# >= 2)) || die '--auth-mode requires litellm or oauth'
+      AUTH_MODE="$2"
+      shift
       ;;
     --finder-run-id)
       (($# >= 2)) || die '--finder-run-id requires an ID'
@@ -231,6 +238,7 @@ done
 [[ -z "$BUG_CANDIDATE_PATH" || -z "$BUG_CANDIDATE_DIR" ]] || die 'Use either --bug-candidate or --bug-candidate-dir, not both'
 [[ "$FINDER_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || die '--finder-timeout must be a positive integer'
 [[ "$PATCHER_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || die '--patcher-timeout must be a positive integer'
+[[ "$AUTH_MODE" == litellm || "$AUTH_MODE" == oauth ]] || die '--auth-mode must be litellm or oauth'
 
 require_command python3
 
@@ -282,7 +290,7 @@ printf 'E2E ID: %s\n' "$E2E_ID"
 printf 'Finder work dir: %s\n' "$FINDER_WORK_DIR"
 printf 'Patcher work dir: %s\n' "$PATCHER_WORK_DIR"
 
-FINDER_ARGS=("${COMMON_TARGET_ARGS[@]}" --timeout "$FINDER_TIMEOUT" --build-id "$FINDER_BUILD_ID" --run-id "$FINDER_RUN_ID" --compose-file "$FINDER_COMPOSE_FILE" --work-dir "$FINDER_WORK_DIR")
+FINDER_ARGS=("${COMMON_TARGET_ARGS[@]}" --timeout "$FINDER_TIMEOUT" --build-id "$FINDER_BUILD_ID" --run-id "$FINDER_RUN_ID" --auth-mode "$AUTH_MODE" --compose-file "$FINDER_COMPOSE_FILE" --work-dir "$FINDER_WORK_DIR")
 if [[ -n "$SEED_DIR" ]]; then
   FINDER_ARGS+=(--seed-dir "$SEED_DIR")
 fi
@@ -367,7 +375,7 @@ if ((pov_count == 0)); then
 fi
 printf 'Staged %s Finder PoV artifact(s) for Patcher input.\n' "$pov_count"
 
-PATCHER_ARGS=(--fuzz-proj-path "$FUZZ_PROJ_PATH" --target-harness "$TARGET_HARNESS" --sanitizer "$SANITIZER" --pov-dir "$POV_STAGING_DIR" --timeout "$PATCHER_TIMEOUT" --build-id "$PATCHER_BUILD_ID" --run-id "$PATCHER_RUN_ID" --compose-file "$PATCHER_COMPOSE_FILE" --work-dir "$PATCHER_WORK_DIR")
+PATCHER_ARGS=(--fuzz-proj-path "$FUZZ_PROJ_PATH" --target-harness "$TARGET_HARNESS" --sanitizer "$SANITIZER" --pov-dir "$POV_STAGING_DIR" --timeout "$PATCHER_TIMEOUT" --build-id "$PATCHER_BUILD_ID" --run-id "$PATCHER_RUN_ID" --auth-mode "$AUTH_MODE" --compose-file "$PATCHER_COMPOSE_FILE" --work-dir "$PATCHER_WORK_DIR")
 if [[ -n "$TARGET_SOURCE_PATH" ]]; then
   PATCHER_ARGS+=(--target-source-path "$TARGET_SOURCE_PATH")
 fi

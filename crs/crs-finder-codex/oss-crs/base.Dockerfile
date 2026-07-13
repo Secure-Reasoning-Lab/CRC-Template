@@ -34,7 +34,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-ARG CODEX_CLI_VERSION=0.104.0
+ARG CODEX_CLI_VERSION=0.144.3
 
 # Codex CLI (pinned to avoid breaking config schema changes)
 RUN npm install -g @openai/codex@${CODEX_CLI_VERSION}

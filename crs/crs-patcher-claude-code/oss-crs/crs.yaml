@@ -22,9 +22,9 @@ crs_run_phase:
     additional_env:
       # Default values. To override, set additional_env in compose yaml.
       CRS_AGENT: claude_code
-      # This is intentionally a run-module secret. A CRS entry's
-      # additional_env is also passed to target build containers.
-      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN}"
+      # Optional OAuth fallback. LiteLLM-mode wrappers explicitly clear this
+      # variable so Claude Code uses the framework-injected proxy instead.
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
       # CLAUDE_CODE_CLI_VERSION: "2.1.42"  # Optional prepare-phase override for base image build
       # ANTHROPIC_MODEL: claude-opus-4-6
       # CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-4-6
@@ -48,10 +48,5 @@ supported_target:
 
 required_llms:
   - claude-opus-4-8
-  - claude-haiku-4-5-20251001
-  - claude-sonnet-4-6
-
-# The checked-in development compose intentionally uses Claude Code OAuth.
-# A LiteLLM-backed variant should remove this requirement in its own manifest.
-required_envs:
-  - CLAUDE_CODE_OAUTH_TOKEN
+  - claude-haiku-4-5
+  - claude-sonnet-5

@@ -90,5 +90,10 @@ def test_run_does_not_pass_debug_file_flag(monkeypatch, tmp_path: Path) -> None:
     assert len(popen_calls) == 1
     cmd = popen_calls[0]
     assert cmd[:4] == ["claude", "-p", "--verbose", "--dangerously-skip-permissions"]
+    disallowed_index = cmd.index("--disallowedTools")
+    assert cmd[disallowed_index + 1 : disallowed_index + 3] == [
+        "EnterPlanMode",
+        "ExitPlanMode",
+    ]
     assert "--append-system-prompt" in cmd
     assert "--debug-file" not in cmd

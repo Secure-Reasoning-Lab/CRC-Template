@@ -34,9 +34,9 @@ crs_run_phase:
       # explicit CRS_ENABLE_EXPERIMENTAL_ENTRYPOINTS=1 opt-in.
       CRS_ENTRYPOINT: run_crs
       ANTHROPIC_MODEL: claude-opus-4-8
-      # Run-module environment is not passed to target build containers. The
-      # root wrapper resolves this required host secret before invoking oss-crs.
-      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN}"
+      # Optional OAuth fallback. LiteLLM-mode wrappers explicitly clear this
+      # variable so Claude Code uses the framework-injected proxy instead.
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
       # AGENT_TIMEOUT: "0"   # seconds, 0 = no limit (default)
 
 supported_target:
@@ -57,10 +57,5 @@ supported_target:
 # when the CRS authenticates via CLAUDE_CODE_OAUTH_TOKEN.
 required_llms:
 - claude-opus-4-8
-- claude-sonnet-4-6
-- claude-haiku-4-5-20251001
-
-# The checked-in development compose intentionally uses Claude Code OAuth.
-# A LiteLLM-backed variant should remove this requirement in its own manifest.
-required_envs:
-- CLAUDE_CODE_OAUTH_TOKEN
+- claude-sonnet-5
+- claude-haiku-4-5

@@ -105,7 +105,8 @@ crs-codex:
   llm_budget: 10
   additional_env:
     CRS_AGENT: codex
-    CODEX_MODEL: gpt-5.4
+    CODEX_MODEL: gpt-5.6-sol
+    CODEX_MODEL_REASONING_EFFORT: xhigh
 
 llm_config:
   # Optional: uncomment if you want OSS-CRS to inject an external LiteLLM endpoint.
@@ -131,21 +132,13 @@ crs-compose up -f crs-compose.yaml
 | Environment variable | Default | Description |
 |---|---|---|
 | `CRS_AGENT` | `codex` | Agent module name (maps to `agents/<name>.py`) |
-| `CODEX_MODEL` | `gpt-5.4` | Model passed to `codex exec --model` |
+| `CODEX_MODEL` | `gpt-5.6-sol` | Model passed to `codex exec --model` |
+| `CODEX_MODEL_REASONING_EFFORT` | `xhigh` | Reasoning effort written to Codex `config.toml` |
 | `AGENT_TIMEOUT` | `0` (no limit) | Agent timeout in seconds (0 = run until budget exhausted) |
 
-Available models:
-- `gpt-5-2025-08-07`
-- `gpt-5-mini-2025-08-07`
-- `gpt-5-pro-2025-10-06`
-- `gpt-5-codex`
-- `gpt-5.1-2025-11-13`
-- `gpt-5.1-codex`
-- `gpt-5.1-codex-mini`
-- `gpt-5.2-2025-12-11`
-- `gpt-5.2-codex`
-- `gpt-5.3-codex`
-- `gpt-5.4` (default)
+The prepared image pins `@openai/codex` to `0.144.3`. Override the CLI pin,
+model, or reasoning effort with `CODEX_CLI_VERSION`, `CODEX_MODEL`, and
+`CODEX_MODEL_REASONING_EFFORT` in the CRS compose configuration.
 
 ## Runtime behavior
 

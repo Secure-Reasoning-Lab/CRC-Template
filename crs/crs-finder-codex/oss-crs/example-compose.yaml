@@ -22,17 +22,10 @@ crs-bug-finding-codex:
   additional_env:
     # Override CRS defaults here.
     # Optional prepare-phase CLI pin:
-    #   CODEX_CLI_VERSION: 0.104.0
-    # Pinned snapshots (as of 2026-02-16):
-    #   gpt-5-2025-08-07
-    #   gpt-5-mini-2025-08-07
-    #   gpt-5-pro-2025-10-06
-    #   gpt-5.1-2025-11-13
-    #   gpt-5.2-2025-12-11
-    # Codex models currently use canonical IDs (no dated suffix published):
-    #   gpt-5-codex, gpt-5.1-codex, gpt-5.1-codex-mini, gpt-5.2-codex, gpt-5.3-codex
+    #   CODEX_CLI_VERSION: 0.144.3
     CRS_AGENT: codex
-    CODEX_MODEL: gpt-5.4
+    CODEX_MODEL: gpt-5.6-sol
+    CODEX_MODEL_REASONING_EFFORT: xhigh
     # AGENT_TIMEOUT: "3600"                              # Optional: seconds, 0 = no limit (default)
 
 # --- Optional LLM Configuration --------------------------------------------

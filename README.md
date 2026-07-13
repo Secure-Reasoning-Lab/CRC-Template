@@ -32,18 +32,31 @@ and model routing can be supplied by outer OSS-CRS or CRSBench configuration.
 - An OSS-Fuzz-format target directory containing `Dockerfile` and `build.sh`
 - At least eight CPUs and roughly 24 GB of available memory for the checked-in
   development compose allocation
-- A Claude Code OAuth token available as `CLAUDE_CODE_OAUTH_TOKEN`
+- For the default workflow, an OpenAI-compatible upstream URL and key
 
-Create an ignored root `.env` file or export the token in the shell:
+Create an ignored root `.env` file or export the variables in the shell:
 
 ```bash
-CLAUDE_CODE_OAUTH_TOKEN=...
+CRC_LITELLM_UPSTREAM_BASE_URL=https://api.example.com/v1
+CRC_LITELLM_UPSTREAM_API_KEY=...
 ```
 
-The checked-in Claude compose files deliberately omit `llm_config`; they use
-Claude Code OAuth instead of an OSS-CRS-managed LiteLLM sidecar. The token
-placeholder is defined in each CRS run module, not the team-level compose entry,
-so it is not passed into target build containers.
+The default Finder and Patcher scripts use an OSS-CRS-managed internal LiteLLM
+sidecar. Claude Code still sends Anthropic Messages requests, while LiteLLM
+routes the configured Claude aliases to the OpenAI-compatible upstream. The
+upstream credential is mounted only into LiteLLM; CRS containers receive a
+per-run proxy key. `configs/litellm-config.yaml` maps Opus to `gpt-5.6-sol`,
+Sonnet to `gpt-5.6-terra`, and currently maps Haiku to the verified Sol route.
+For these OpenAI-backed aliases, LiteLLM translates the Messages protocol to
+the OpenAI Responses API internally. The upstream must support `/v1/responses`
+with streaming function calls and `function_call_output`; do not add
+`response_format` or change Claude Code to an OpenAI endpoint directly.
+
+OAuth remains available as an explicit fallback. Set
+`CLAUDE_CODE_OAUTH_TOKEN`, select `--auth-mode oauth`, and pass the original
+`configs/finder-claude-code.yaml` and `configs/patcher-claude-code.yaml` files.
+The LiteLLM wrappers deliberately clear OAuth so an inherited token cannot
+bypass the proxy.
 
 ## Setup
 
@@ -54,10 +67,10 @@ Initialize the framework and inspect the local machine:
 ```
 
 `./scripts/setup.sh --check` does not alter submodule state. It validates both
-local Claude compose files and manifests without Docker, then reports missing
-runtime prerequisites. Each compose uses a relative `source.local_path`; all
-root scripts change to the repository root before calling OSS-CRS so that path
-is stable.
+LiteLLM and OAuth compose/manifests without Docker, then reports missing runtime
+prerequisites. Each compose uses a relative `source.local_path`; all root
+scripts change to the repository root before calling OSS-CRS so that path is
+stable.
 
 ## Claude End-To-End Run
 
@@ -76,6 +89,10 @@ the Patcher with `--pov-dir`. The two stages use separate work directories and
 separate build/run IDs because the Patcher fetches input only at startup and
 must build its own CRS-specific target output. It fails if the Finder submits no
 PoV or if the Patcher submits no non-empty `.diff`.
+
+LiteLLM's `llm_budget` is a framework circuit breaker. For private model aliases
+its cost estimates can differ from the upstream provider's billing, so set a
+provider-side limit as well before a long campaign.
 
 For a delta challenge, pass the delta evidence to both stages:
 

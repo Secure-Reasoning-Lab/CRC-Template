@@ -5,7 +5,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 PATCHER_NAME="crs-patcher-claude-code"
-DEFAULT_COMPOSE_FILE="$ROOT/configs/patcher-claude-code.yaml"
+DEFAULT_COMPOSE_FILE="$ROOT/configs/patcher-claude-code-litellm.yaml"
 DEFAULT_WORK_DIR="$ROOT/generated/oss-crs-work"
 
 usage() {
@@ -37,9 +37,10 @@ Other options:
   --build-id ID               Reuse or name a build; generated when building
   --run-id ID                 Name a run; generated when omitted
   --early-exit                Stop after the first submitted patch
+  --auth-mode MODE            litellm (default) or oauth
   --skip-prepare              Skip oss-crs prepare
   --skip-build                Reuse an existing --build-id; errors if it is omitted
-  --compose-file FILE         Compose file (default: configs/patcher-claude-code.yaml)
+  --compose-file FILE         Compose file (default: configs/patcher-claude-code-litellm.yaml)
   --work-dir DIR              OSS-CRS work directory (default: generated/oss-crs-work)
   -h, --help                  Show this help
 
@@ -71,6 +72,7 @@ TIMEOUT="3600"
 BUILD_ID=""
 RUN_ID=""
 EARLY_EXIT=false
+AUTH_MODE="litellm"
 SKIP_PREPARE=false
 SKIP_BUILD=false
 COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
@@ -146,6 +148,11 @@ while (($#)); do
     --early-exit)
       EARLY_EXIT=true
       ;;
+    --auth-mode)
+      (($# >= 2)) || die '--auth-mode requires litellm or oauth'
+      AUTH_MODE="$2"
+      shift
+      ;;
     --skip-prepare)
       SKIP_PREPARE=true
       ;;
@@ -187,6 +194,7 @@ done
 [[ -z "$BUG_CANDIDATE_DIR" || -d "$BUG_CANDIDATE_DIR" ]] || die "Bug-candidate directory does not exist: $BUG_CANDIDATE_DIR"
 [[ -z "$BUG_CANDIDATE_PATH" || -z "$BUG_CANDIDATE_DIR" ]] || die 'Use either --bug-candidate or --bug-candidate-dir, not both'
 [[ "$TIMEOUT" =~ ^[1-9][0-9]*$ ]] || die '--timeout must be a positive integer'
+[[ "$AUTH_MODE" == litellm || "$AUTH_MODE" == oauth ]] || die '--auth-mode must be litellm or oauth'
 
 require_command uv
 require_command docker
@@ -194,19 +202,21 @@ require_command python3
 docker info >/dev/null 2>&1 || die 'Docker daemon is not reachable. Run scripts/setup.sh for diagnostics.'
 docker compose version >/dev/null 2>&1 || die 'Docker Compose v2 is required.'
 
-if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -f "$ROOT/.env" ]]; then
-  # Read only the documented dotenv assignment. Do not execute a local .env as
-  # shell code merely to obtain a token for this wrapper. OSS-CRS validates the
-  # required run-module variable immediately before the run phase.
-  token_line="$(sed -n -E 's/^[[:space:]]*(export[[:space:]]+)?CLAUDE_CODE_OAUTH_TOKEN[[:space:]]*=[[:space:]]*//p' "$ROOT/.env" | tail -n 1)"
-  token_line="${token_line%$'\r'}"
-  if [[ "${token_line:0:1}" == '"' && "${token_line: -1}" == '"' ]]; then
-    token_line="${token_line:1:-1}"
-  elif [[ "${token_line:0:1}" == "'" && "${token_line: -1}" == "'" ]]; then
-    token_line="${token_line:1:-1}"
-  fi
-  [[ -z "$token_line" || "$token_line" == \#* ]] || export CLAUDE_CODE_OAUTH_TOKEN="$token_line"
-fi
+source "$ROOT/scripts/load-local-env.sh"
+case "$AUTH_MODE" in
+  litellm)
+    # Claude Code prefers OAuth whenever this is non-empty. Prevent an
+    # inherited legacy token from bypassing the framework-owned proxy.
+    unset CLAUDE_CODE_OAUTH_TOKEN
+    load_litellm_upstream_env "$ROOT"
+    [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" ]] || die 'CRC_LITELLM_UPSTREAM_BASE_URL is required for LiteLLM mode'
+    [[ -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]] || die 'CRC_LITELLM_UPSTREAM_API_KEY is required for LiteLLM mode'
+    ;;
+  oauth)
+    load_claude_oauth_env "$ROOT"
+    [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]] || die 'CLAUDE_CODE_OAUTH_TOKEN is required for OAuth mode'
+    ;;
+esac
 if [[ "$SKIP_BUILD" == true && -z "$BUILD_ID" ]]; then
   die '--skip-build requires --build-id; oss-crs run otherwise auto-builds.'
 fi
