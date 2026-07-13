@@ -1,0 +1,29 @@
+# Version control
+.git/
+
+# Codex local settings
+.codex/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Documentation (not needed in build)
+README.md
+
+# Keep agents/*.md — they are AGENTS.md templates used at runtime
+
+# Environment files
+.env*
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Tags file
+tags
