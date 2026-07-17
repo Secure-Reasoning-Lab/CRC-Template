@@ -146,12 +146,12 @@ if [[ -r /proc/meminfo ]]; then
   fi
 fi
 
-if [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" && -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]]; then
+if [[ -n "${LITELLM_UPSTREAM_BASE_URL:-}" && -n "${LITELLM_UPSTREAM_API_KEY:-}" ]]; then
   note_ok 'LiteLLM upstream URL and API key are available for the default workflow.'
-elif [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" || -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]]; then
-  note_warn 'LiteLLM mode needs both CRC_LITELLM_UPSTREAM_BASE_URL and CRC_LITELLM_UPSTREAM_API_KEY.'
+elif [[ -n "${LITELLM_UPSTREAM_BASE_URL:-}" || -n "${LITELLM_UPSTREAM_API_KEY:-}" ]]; then
+  note_warn 'LiteLLM mode needs both LITELLM_UPSTREAM_BASE_URL and LITELLM_UPSTREAM_API_KEY.'
 elif [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-  note_warn 'Only CLAUDE_CODE_OAUTH_TOKEN is available. Use --auth-mode oauth with the OAuth compose files.'
+  note_warn 'Only CLAUDE_CODE_OAUTH_TOKEN is available. Comment out the Claude compose llm_config block and use --auth-mode oauth.'
 else
   note_warn 'No LiteLLM upstream credentials or Claude OAuth token were found. Finder/Patcher runs will fail before prepare/build.'
 fi
@@ -160,4 +160,4 @@ if ((status != 0)); then
   exit "$status"
 fi
 
-printf 'Setup checks passed. Use scripts/run-claude-e2e.sh for OSS-CRS Claude staging or scripts/run-codex-e2e.sh for CRSBench Codex smoke testing.\n'
+printf 'Setup checks passed. Use scripts/run-claude-e2e.sh or scripts/run-codex-e2e.sh for a local OSS-CRS workflow.\n'

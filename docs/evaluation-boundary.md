@@ -17,9 +17,9 @@ The local workflow has useful but limited checks:
    finder run for a selected harness.
 3. `scripts/run-patcher.sh` accepts startup evidence and produces a local patch
    artifact only after the Patcher submits a non-empty `.diff`.
-4. `scripts/run-claude-e2e.sh` serializes the two components: it resolves
-   Finder PoVs, stages them as Patcher startup input, and exports a local
-   handoff bundle. It does not call CRSBench.
+4. `scripts/run-claude-e2e.sh` and `scripts/run-codex-e2e.sh` serialize the two
+   components through one shared OSS-CRS implementation: they resolve Finder
+   PoVs, stage them as Patcher startup input, and export a local handoff bundle.
 5. `scripts/print-artifacts.sh` and `scripts/collect-submission.sh` resolve a
    selected compose entry through the OSS-CRS JSON interface and export an
    individual CRS run.
@@ -31,8 +31,7 @@ revision can all differ from the official evaluation environment.
 
 ## Organizer Evaluation
 
-`CRC-Evaluate` should be a separate organizer-controlled repository or service.
-It should pin and own:
+The organizer-controlled evaluation service should pin and own:
 
 - benchmark and OSS-Fuzz inputs
 - source and patch variants
@@ -40,22 +39,10 @@ It should pin and own:
 - execution limits and isolation policy
 - result retention, deduplication, and scoring rules
 
-For a submitted PoV directory, the authoritative verification operation is:
-
-```text
-crsbench verify <benchmark> --pov-dir <submitted-povs>
-```
-
-For patches, the authoritative operation is:
-
-```text
-crsbench patch-verify <benchmark> --patch-dir <submitted-patches> --pov-dir <verified-povs>
-```
-
-Those commands determine whether a PoV actually triggers the intended variant
-and whether a patch fixes the verified vulnerability without unacceptable
-regressions. CRSBench can also provide the evaluator/queue infrastructure when
-an organizer needs distributed verification.
+Independent organizer checks determine whether a PoV triggers the intended
+variant and whether a patch fixes the verified vulnerability without
+unacceptable regressions. Those checks and their infrastructure are not part
+of this participant-facing repository.
 
 ## Interface Between Repositories
 
@@ -76,12 +63,12 @@ oss-crs-submission.tar.gz
 The local E2E wrapper produces a separate bundle containing both stage artifact
 JSON files, staged PoVs, exported patches, and `handoff-metadata.json`. It does
 not combine the two independent OSS-CRS archives into an official submission:
-each stage has its own compose and work directory. `CRC-Evaluate` should define
-the accepted combined schema, validate it, and retain the organizer-side mapping
-between a Finder result and a Patcher result.
+each stage has its own compose and work directory. The organizer should define
+the accepted combined schema, validate it, and retain the mapping between a
+Finder result and a Patcher result.
 
-`CRC-Evaluate` should define its own accepted submission schema and validate it
-before invoking CRSBench. It should not trust a team-local `verified` label,
-timing report, or archive layout as a score. Keeping this boundary explicit
-lets teams iterate on CRS implementations without coupling organizer policy or
-private benchmark material into `CRC-Template`.
+The organizer should validate its accepted submission schema independently. It
+should not trust a team-local `verified` label, timing report, or archive layout
+as a score. Keeping this boundary explicit lets teams iterate on CRS
+implementations without coupling organizer policy or private benchmark
+material into `CRC-Template`.

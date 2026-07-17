@@ -12,7 +12,7 @@ usage() {
   cat <<'EOF'
 Usage: scripts/run-patcher.sh --fuzz-proj-path PATH --target-harness NAME [evidence options]
 
-Runs the local Claude Code patcher through:
+Runs a local Patcher through:
   oss-crs prepare -> oss-crs build-target -> oss-crs run -> oss-crs artifacts
 
 Required:
@@ -37,7 +37,8 @@ Other options:
   --build-id ID               Reuse or name a build; generated when building
   --run-id ID                 Name a run; generated when omitted
   --early-exit                Stop after the first submitted patch
-  --auth-mode MODE            litellm (default) or oauth
+  --auth-mode MODE            litellm (default), or oauth for Claude Code
+  --crs-name NAME             Compose entry name (default: crs-patcher-claude-code)
   --skip-prepare              Skip oss-crs prepare
   --skip-build                Reuse an existing --build-id; errors if it is omitted
   --compose-file FILE         Compose file (default: configs/patcher-claude-code.yaml)
@@ -153,6 +154,11 @@ while (($#)); do
       AUTH_MODE="$2"
       shift
       ;;
+    --crs-name)
+      (($# >= 2)) || die '--crs-name requires a name'
+      PATCHER_NAME="$2"
+      shift
+      ;;
     --skip-prepare)
       SKIP_PREPARE=true
       ;;
@@ -182,6 +188,7 @@ done
 
 [[ -n "$FUZZ_PROJ_PATH" ]] || die '--fuzz-proj-path is required'
 [[ -n "$TARGET_HARNESS" ]] || die '--target-harness is required'
+[[ -n "$PATCHER_NAME" ]] || die '--crs-name must not be empty'
 [[ -n "$POV_PATH" || -n "$POV_DIR" || -n "$DIFF_PATH" || -n "$SEED_DIR" || -n "$BUG_CANDIDATE_PATH" || -n "$BUG_CANDIDATE_DIR" ]] || die 'Provide at least one evidence input.'
 [[ -d "$FUZZ_PROJ_PATH" ]] || die "Fuzz project directory does not exist: $FUZZ_PROJ_PATH"
 [[ -f "$COMPOSE_FILE" ]] || die "Compose file does not exist: $COMPOSE_FILE"
@@ -209,8 +216,8 @@ case "$AUTH_MODE" in
     # inherited legacy token from bypassing the framework-owned proxy.
     unset CLAUDE_CODE_OAUTH_TOKEN
     load_litellm_upstream_env "$ROOT"
-    [[ -n "${CRC_LITELLM_UPSTREAM_BASE_URL:-}" ]] || die 'CRC_LITELLM_UPSTREAM_BASE_URL is required for LiteLLM mode'
-    [[ -n "${CRC_LITELLM_UPSTREAM_API_KEY:-}" ]] || die 'CRC_LITELLM_UPSTREAM_API_KEY is required for LiteLLM mode'
+    [[ -n "${LITELLM_UPSTREAM_BASE_URL:-}" ]] || die 'LITELLM_UPSTREAM_BASE_URL is required for LiteLLM mode'
+    [[ -n "${LITELLM_UPSTREAM_API_KEY:-}" ]] || die 'LITELLM_UPSTREAM_API_KEY is required for LiteLLM mode'
     ;;
   oauth)
     load_claude_oauth_env "$ROOT"

@@ -5,20 +5,21 @@ oss_crs_infra:
   cpuset: "0-1"
   memory: "8G"
 
+# Codex uses the configured endpoint directly through OSS-CRS external mode.
+# No local LiteLLM sidecar or llm_budget is created; set an upstream limit.
 llm_config:
   litellm:
     mode: external
     model_check: false
     external:
-      url_env: CRSBENCH_LLM_UPSTREAM_BASE_URL
-      key_env: CRSBENCH_LLM_UPSTREAM_API_KEY
+      url_env: LITELLM_UPSTREAM_BASE_URL
+      key_env: LITELLM_UPSTREAM_API_KEY
 
 crs-finder-codex:
   source:
     local_path: crs/crs-finder-codex
   cpuset: "2-7"
   memory: "16G"
-  llm_budget: 30
   additional_env:
     CRS_AGENT: codex
     CODEX_MODEL: gpt-5.5

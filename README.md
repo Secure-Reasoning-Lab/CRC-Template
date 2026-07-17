@@ -21,7 +21,7 @@ crs/crs-patcher-codex
 
 All four CRSes are imported with their Team Atlanta Git histories preserved
 through non-squashed `git subtree` merges. The checked-in root wrappers cover
-the Claude OSS-CRS staging workflow and the Codex CRSBench smoke workflow.
+the same local OSS-CRS Finder-to-Patcher workflow for Claude Code and Codex.
 
 ## Prerequisites
 
@@ -36,20 +36,21 @@ the Claude OSS-CRS staging workflow and the Codex CRSBench smoke workflow.
 Create an ignored root `.env` file or export the variables in the shell:
 
 ```bash
-CRC_LITELLM_UPSTREAM_BASE_URL=https://api.example.com/v1
-CRC_LITELLM_UPSTREAM_API_KEY=...
+LITELLM_UPSTREAM_BASE_URL=https://api.example.com/v1
+LITELLM_UPSTREAM_API_KEY=...
 ```
 
-The default Finder and Patcher scripts use an OSS-CRS-managed internal LiteLLM
-sidecar. Claude Code still sends Anthropic Messages requests, while LiteLLM
-routes the configured Claude aliases to the OpenAI-compatible upstream. The
-upstream credential is mounted only into LiteLLM; CRS containers receive a
-per-run proxy key. `configs/litellm-config.yaml` maps Opus to `gpt-5.6-sol`,
-Sonnet to `gpt-5.6-terra`, and currently maps Haiku to the verified Sol route.
-For these OpenAI-backed aliases, LiteLLM translates the Messages protocol to
-the OpenAI Responses API internally. The upstream must support `/v1/responses`
-with streaming function calls and `function_call_output`; do not add
-`response_format` or change Claude Code to an OpenAI endpoint directly.
+The Claude compose files ask OSS-CRS to start an internal LiteLLM sidecar.
+Claude Code sends Anthropic Messages requests to that sidecar, which routes the
+configured aliases to the OpenAI-compatible upstream. The upstream credential
+is mounted only into LiteLLM; CRS containers receive a per-run proxy key. The
+Codex compose files use the same local variables as an external OSS-CRS LLM
+endpoint, so OSS-CRS injects the endpoint and key into the Codex CRS without a
+second local proxy. `configs/litellm-config.yaml` maps Opus to `gpt-5.6-sol`,
+Sonnet to `gpt-5.6-terra`, and Haiku to `gpt-5.6-luna`. The upstream must
+support `/v1/responses` with streaming function calls and
+`function_call_output`; do not add `response_format` or point Claude Code at an
+OpenAI endpoint directly.
 
 OAuth remains available as an explicit fallback in the same two canonical
 Claude compose files. Comment out the complete `llm_config` block in
@@ -91,9 +92,11 @@ separate build/run IDs because the Patcher fetches input only at startup and
 must build its own CRS-specific target output. It fails if the Finder submits no
 PoV or if the Patcher submits no non-empty `.diff`.
 
-LiteLLM's `llm_budget` is a framework circuit breaker. For private model aliases
-its cost estimates can differ from the upstream provider's billing, so set a
-provider-side limit as well before a long campaign.
+In the Claude internal-proxy workflow, `llm_budget` is a framework circuit
+breaker. For private model aliases its cost estimates can differ from upstream
+billing, so set a provider-side limit as well. The Codex compose files use
+external mode, where OSS-CRS does not enforce `llm_budget`; an upstream limit is
+required before a long campaign.
 
 For a delta challenge, pass the delta evidence to both stages:
 
@@ -114,40 +117,25 @@ exported patches, and handoff metadata below:
 submissions/<target>/e2e-<e2e-id>/
 ```
 
-It is an implementation artifact, not a CRSBench result.
+It is local implementation evidence, not an organizer verdict.
 
-## Codex CRSBench End-To-End Smoke
+## Codex End-To-End Run
 
-Run the Codex Finder/Patcher chain through CRSBench against the checked-in
-sanity delta benchmark:
-
-```bash
-./scripts/run-codex-e2e.sh
-```
-
-By default the wrapper uses `../CRC-Evaluate`, benchmark
-`sanity-mock-c-delta-01`, harness `fuzz_parse_buffer_section`, and
-`delta/address` mode. It generates a temporary CRSBench registry and two
-experiment configs under:
-
-```text
-generated/crsbench-codex-smoke/<run-id>/
-```
-
-The wrapper runs Finder, independently checks that `crsbench verify` matches
-`cpv_1`, feeds the Finder experiment subtree into Patcher with
-`runtime.inputs.pov.from_experiment_by_crs`, and independently checks that
-`crsbench patch-verify` reports a valid `cpv_1` fix. It sources the ignored
-root `.env` and maps `CRC_LITELLM_UPSTREAM_BASE_URL/API_KEY` to CRSBench's
-`CRSBENCH_LLM_UPSTREAM_BASE_URL/API_KEY` variables without writing secrets into
-generated YAML.
-
-Useful development flags:
+Run the equivalent participant-facing workflow with the Codex CRSes:
 
 ```bash
-./scripts/run-codex-e2e.sh --config-only --run-id codex-preflight-001
-./scripts/run-codex-e2e.sh --crsbench-root /path/to/CRC-Evaluate --run-id codex-smoke-001
+./scripts/run-codex-e2e.sh \
+  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --target-harness example_fuzzer \
+  --e2e-id example-codex-001
 ```
+
+The Claude and Codex entrypoints share one implementation: each calls OSS-CRS
+directly, stages Finder PoVs as Patcher startup input, and requires at least one
+non-empty patch. The Codex entrypoint selects `configs/finder-codex.yaml` and
+`configs/patcher-codex.yaml`; it supports LiteLLM credentials only, not Claude
+OAuth. Target, evidence, timeout, work-directory, and output options are the
+same as for the Claude entrypoint.
 
 ## Finder Run
 
@@ -257,11 +245,9 @@ This repository provides developer-facing execution and local self-checks. A
 file in `SUBMIT_DIR/povs/`, or a locally reproducible crash, is useful evidence
 but is not an organizer score or a final vulnerability verdict.
 
-Organizer-authoritative evaluation belongs in a separate `CRC-Evaluate`
-repository backed by CRSBench. That environment owns benchmark versions, ground
-truth, scoring policy, and verification. It should run `crsbench verify` for
-PoVs and `crsbench patch-verify` for patches against the organizer-controlled
-benchmark package. See [docs/evaluation-boundary.md](docs/evaluation-boundary.md).
+Organizer-authoritative evaluation is a separate service. That environment
+owns benchmark versions, ground truth, scoring policy, and independent
+verification. See [docs/evaluation-boundary.md](docs/evaluation-boundary.md).
 
 ## Provenance
 

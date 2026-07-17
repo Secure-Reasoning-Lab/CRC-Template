@@ -26,8 +26,8 @@ load_root_dotenv_var() {
 
 load_litellm_upstream_env() {
   local root="$1"
-  load_root_dotenv_var "$root" CRC_LITELLM_UPSTREAM_BASE_URL
-  load_root_dotenv_var "$root" CRC_LITELLM_UPSTREAM_API_KEY
+  load_root_dotenv_var "$root" LITELLM_UPSTREAM_BASE_URL
+  load_root_dotenv_var "$root" LITELLM_UPSTREAM_API_KEY
 }
 
 load_claude_oauth_env() {

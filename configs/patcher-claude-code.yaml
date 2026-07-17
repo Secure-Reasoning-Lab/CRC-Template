@@ -16,7 +16,7 @@ crs-patcher-claude-code:
   memory: "16G"
   # For private aliases LiteLLM's cost table can be approximate. Treat this as
   # a circuit breaker rather than the upstream provider's billing authority.
-  llm_budget: 10
+  llm_budget: 30
   additional_env:
     ANTHROPIC_MODEL: claude-opus-4-8
     CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-5
