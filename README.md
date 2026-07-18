@@ -74,15 +74,27 @@ reports missing runtime prerequisites. Each compose uses a relative
 `source.local_path`; all root scripts change to the repository root before
 calling OSS-CRS so that path is stable.
 
+## Bundled Smoke Target
+
+`targets/sanity-mock-c-delta-01` is the blinded project portion of an official
+CRSBench synthetic sanity fixture. It is included so the local E2E commands are
+self-contained. The participant-visible delta hint is stored as `ref.diff`;
+organizer-only `.aixcc` metadata, reference PoVs, patches, logs, and hints are
+not included.
+
 ## Claude End-To-End Run
 
-Run the supported development workflow against one harness:
+Run a short smoke workflow against the bundled target:
 
 ```bash
 ./scripts/run-claude-e2e.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-harness example_fuzzer \
-  --e2e-id example-full-001
+  --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
+  --target-harness fuzz_parse_buffer_section \
+  --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
+  --finder-timeout 360 \
+  --patcher-timeout 360 \
+  --finder-early-exit \
+  --patcher-early-exit
 ```
 
 The wrapper runs the Finder to completion, resolves its submitted PoVs through
@@ -121,13 +133,17 @@ It is local implementation evidence, not an organizer verdict.
 
 ## Codex End-To-End Run
 
-Run the equivalent participant-facing workflow with the Codex CRSes:
+Run the equivalent smoke workflow with the Codex CRSes:
 
 ```bash
 ./scripts/run-codex-e2e.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-harness example_fuzzer \
-  --e2e-id example-codex-001
+  --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
+  --target-harness fuzz_parse_buffer_section \
+  --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
+  --finder-timeout 360 \
+  --patcher-timeout 360 \
+  --finder-early-exit \
+  --patcher-early-exit
 ```
 
 The Claude and Codex entrypoints share one implementation: each calls OSS-CRS
