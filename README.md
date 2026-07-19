@@ -11,6 +11,31 @@
 
 The E2E wrappers run the selected Finder, collect its submitted PoVs, and pass them to the matching Patcher.
 
+## Submission Manifest
+
+[`submission.yaml`](submission.yaml) identifies the Finder and Patcher that form the submission.
+Both paths are relative to the repository root and must point to OSS-CRS-compatible source directories containing `oss-crs/crs.yaml`.
+
+```yaml
+schema_version: 1
+
+submission:
+  name: my-crs
+
+crs:
+  finder:
+    path: crs/my-finder
+  patcher:
+    path: crs/my-patcher
+```
+
+The selected Finder must declare `type: [bug-finding]`; the selected Patcher must declare `type: [bug-fixing]`.
+Model dependencies belong in each CRS's `required_llms` declaration.
+Runtime resources, credentials, timeouts, budgets, and benchmark selection are supplied by the evaluator.
+
+Files under `configs/` are local execution profiles used by the scripts in this repository.
+They are not part of the evaluation policy.
+
 ## Requirements
 
 - Linux with Git and submodule support
