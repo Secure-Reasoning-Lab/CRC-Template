@@ -34,6 +34,12 @@ crs_run_phase:
       # explicit CRS_ENABLE_EXPERIMENTAL_ENTRYPOINTS=1 opt-in.
       CRS_ENTRYPOINT: run_crs
       ANTHROPIC_MODEL: claude-opus-4-8
+      CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-5
+      ANTHROPIC_DEFAULT_OPUS_MODEL: claude-opus-4-8
+      ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-5
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: claude-haiku-4-6
+      CLAUDE_CODE_EFFORT_LEVEL: high
+      CLAUDE_CODE_ALWAYS_ENABLE_EFFORT: "1"
       # Optional OAuth fallback. LiteLLM-mode wrappers explicitly clear this
       # variable so Claude Code uses the framework-injected proxy instead.
       CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
