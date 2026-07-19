@@ -20,10 +20,10 @@ crs-patcher-claude-code:
   memory: "16G"
   llm_budget: 30
   additional_env:
-    ANTHROPIC_MODEL: gpt-5.5
-    CLAUDE_CODE_SUBAGENT_MODEL: gpt-5.4
-    ANTHROPIC_DEFAULT_OPUS_MODEL: gpt-5.5
-    ANTHROPIC_DEFAULT_SONNET_MODEL: gpt-5.4
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: gpt-5.4-mini
+    ANTHROPIC_MODEL: claude-opus-4-8
+    CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-5
+    ANTHROPIC_DEFAULT_OPUS_MODEL: claude-opus-4-8
+    ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-5
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: claude-haiku-4-6
     CLAUDE_CODE_EFFORT_LEVEL: high
     CLAUDE_CODE_ALWAYS_ENABLE_EFFORT: "1"

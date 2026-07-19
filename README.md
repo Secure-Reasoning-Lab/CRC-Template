@@ -59,8 +59,8 @@ Use `./scripts/setup.sh --check` to check the current setup without changing sub
   --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
   --target-harness fuzz_parse_buffer_section \
   --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
-  --finder-timeout 360 \
-  --patcher-timeout 360 \
+  --finder-timeout 720 \
+  --patcher-timeout 720 \
   --finder-early-exit \
   --patcher-early-exit
 ```
@@ -72,8 +72,8 @@ Use `./scripts/setup.sh --check` to check the current setup without changing sub
   --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
   --target-harness fuzz_parse_buffer_section \
   --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
-  --finder-timeout 360 \
-  --patcher-timeout 360 \
+  --finder-timeout 720 \
+  --patcher-timeout 720 \
   --finder-early-exit \
   --patcher-early-exit
 ```
