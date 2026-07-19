@@ -1,38 +1,29 @@
 run_env: local
 docker_registry: local
 
-# The framework services use the first two CPUs. The Finder gets the remaining
-# six CPUs on the default eight-core local development host.
 oss_crs_infra:
   cpuset: "0-1"
   memory: "8G"
 
-crs-finder-claude-code:
-  source:
-    # OSS-CRS resolves local_path from the process working directory. All root
-    # scripts cd to the CRC-Template root before invoking oss-crs.
-    local_path: crs/crs-finder-claude-code
-  cpuset: "2-7"
-  memory: "16G"
-  # For private aliases LiteLLM's cost table can be approximate. Treat this as
-  # a circuit breaker rather than the upstream provider's billing authority.
-  llm_budget: 30
-  additional_env:
-    ANTHROPIC_MODEL: claude-opus-4-8
-    CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-5
-    ANTHROPIC_DEFAULT_OPUS_MODEL: claude-opus-4-8
-    ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-5
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: claude-haiku-4-5
-    CLAUDE_CODE_EFFORT_LEVEL: high
-    CLAUDE_CODE_ALWAYS_ENABLE_EFFORT: "1"
-
-# Default: OSS-CRS starts and meters an internal LiteLLM proxy.
-# To use Claude Code OAuth instead, comment out this entire llm_config block,
-# set CLAUDE_CODE_OAUTH_TOKEN, and run the wrapper with --auth-mode oauth.
-# Without llm_config, the llm_budget above is not enforced; use an account-side
-# spending limit.
+# For Claude Code OAuth, comment out this block and use --auth-mode oauth.
 llm_config:
   litellm:
     mode: internal
+    model_check: false
     internal:
       config_path: configs/litellm-config.yaml
+
+crs-finder-claude-code:
+  source:
+    local_path: crs/crs-finder-claude-code
+  cpuset: "2-7"
+  memory: "16G"
+  llm_budget: 30
+  additional_env:
+    ANTHROPIC_MODEL: gpt-5.5
+    CLAUDE_CODE_SUBAGENT_MODEL: gpt-5.4
+    ANTHROPIC_DEFAULT_OPUS_MODEL: gpt-5.5
+    ANTHROPIC_DEFAULT_SONNET_MODEL: gpt-5.4
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: gpt-5.4-mini
+    CLAUDE_CODE_EFFORT_LEVEL: high
+    CLAUDE_CODE_ALWAYS_ENABLE_EFFORT: "1"

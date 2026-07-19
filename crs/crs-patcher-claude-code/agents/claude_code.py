@@ -30,6 +30,14 @@ _TEMPLATE_PATH = Path(__file__).with_suffix(".md")
 _SECTIONS_DIR = _TEMPLATE_PATH.with_name("sections")
 
 
+def _normalize_anthropic_base_url(url: str) -> str:
+    """Convert a shared OpenAI-style ``.../v1`` base into Claude's base URL."""
+    normalized = url.rstrip("/")
+    if normalized.endswith("/v1"):
+        normalized = normalized.removesuffix("/v1")
+    return normalized
+
+
 def _load_section(section_name: str) -> str:
     section_path = _SECTIONS_DIR / section_name
     return section_path.read_text()
@@ -108,10 +116,11 @@ def setup(source_dir: Path, config: dict) -> None:
     if oauth_token:
         logger.info("CLAUDE_CODE_OAUTH_TOKEN found, using OAuth authentication (ignoring OSS_CRS LLM config)")
     elif llm_api_url and llm_api_key:
-        os.environ["ANTHROPIC_BASE_URL"] = llm_api_url
+        anthropic_base_url = _normalize_anthropic_base_url(llm_api_url)
+        os.environ["ANTHROPIC_BASE_URL"] = anthropic_base_url
         os.environ["ANTHROPIC_AUTH_TOKEN"] = llm_api_key
         os.environ["ANTHROPIC_API_KEY"] = ""
-        logger.info("Claude Code configured with LiteLLM proxy: %s", llm_api_url)
+        logger.info("Claude Code configured with LiteLLM proxy: %s", anthropic_base_url)
         logger.info("ANTHROPIC_MODEL: %s", os.environ.get("ANTHROPIC_MODEL", "(default)"))
         logger.info("CLAUDE_CODE_SUBAGENT_MODEL: %s", os.environ.get("CLAUDE_CODE_SUBAGENT_MODEL", "(default)"))
         logger.info("ANTHROPIC_DEFAULT_OPUS_MODEL: %s", os.environ.get("ANTHROPIC_DEFAULT_OPUS_MODEL", "(default)"))

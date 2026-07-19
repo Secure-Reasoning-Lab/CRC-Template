@@ -56,6 +56,14 @@ if DEFAULT_TIMEOUT < 0:
 # ---------------------------------------------------------------------------
 # Environment / auth setup
 # ---------------------------------------------------------------------------
+def _normalize_anthropic_base_url(url: str) -> str:
+    """Convert a shared OpenAI-style ``.../v1`` base into Claude's base URL."""
+    normalized = url.rstrip("/")
+    if normalized.endswith("/v1"):
+        normalized = normalized.removesuffix("/v1")
+    return normalized
+
+
 def configure_claude_env(config: dict | None = None, source_dir: Path | None = None) -> None:
     """Configure Claude Code auth + on-disk config. Call once at startup.
 
@@ -83,10 +91,11 @@ def configure_claude_env(config: dict | None = None, source_dir: Path | None = N
     if oauth_token:
         logger.info("CLAUDE_CODE_OAUTH_TOKEN found, using OAuth authentication")
     elif llm_api_url and llm_api_key:
-        os.environ["ANTHROPIC_BASE_URL"] = llm_api_url
+        anthropic_base_url = _normalize_anthropic_base_url(llm_api_url)
+        os.environ["ANTHROPIC_BASE_URL"] = anthropic_base_url
         os.environ["ANTHROPIC_AUTH_TOKEN"] = llm_api_key
         os.environ["ANTHROPIC_API_KEY"] = ""
-        logger.info("Claude Code configured with LLM proxy: %s", llm_api_url)
+        logger.info("Claude Code configured with LLM proxy: %s", anthropic_base_url)
     else:
         logger.warning("No CLAUDE_CODE_OAUTH_TOKEN or llm_api_url/key; Claude Code may not authenticate")
 

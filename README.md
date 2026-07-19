@@ -1,90 +1,58 @@
 # CRC-Template
 
-`CRC-Template` is the local development repository for Cyber Reasoning System
-(CRS) implementations. It keeps the OSS-CRS framework as one submodule and
-keeps CRS implementations in this repository as normal source trees. The
-currently integrated Claude Code workflow is:
+`CRC-Template` is a starter repository for running Finder-to-Patcher Cyber Reasoning System (CRS) workflows with [OSS-CRS](https://github.com/ossf/oss-crs). It includes Claude Code and Codex implementations that share the same local workflow and artifact layout.
 
-```text
-crs/crs-finder-claude-code
-            -> submitted PoVs
-crs/crs-patcher-claude-code
-```
+## Included CRSes
 
-The equivalent Codex CRS sources are also integrated:
+| Agent | Finder | Patcher |
+| --- | --- | --- |
+| Claude Code | `crs/crs-finder-claude-code` | `crs/crs-patcher-claude-code` |
+| Codex | `crs/crs-finder-codex` | `crs/crs-patcher-codex` |
 
-```text
-crs/crs-finder-codex
-            -> submitted PoVs
-crs/crs-patcher-codex
-```
+The E2E wrappers run the selected Finder, collect its submitted PoVs, and pass them to the matching Patcher.
 
-All four CRSes are imported with their Team Atlanta Git histories preserved
-through non-squashed `git subtree` merges. The checked-in root wrappers cover
-the same local OSS-CRS Finder-to-Patcher workflow for Claude Code and Codex.
+## Requirements
 
-## Prerequisites
-
-- Git with submodule support
+- Linux with Git and submodule support
 - [uv](https://docs.astral.sh/uv/)
-- Docker Engine with Docker Compose v2 and a reachable daemon
-- An OSS-Fuzz-format target directory containing `Dockerfile` and `build.sh`
-- At least eight CPUs and roughly 24 GB of available memory for the checked-in
-  development compose allocation
-- For the default workflow, an OpenAI-compatible upstream URL and key
+- Docker Engine with Docker Compose v2
+- At least 8 logical CPUs and approximately 24 GB of memory for the default configuration
+- An upstream OpenAI-compatible LLM endpoint and API key
 
-Create an ignored root `.env` file or export the variables in the shell:
+## Configure the LLM Endpoint
+
+Create a root `.env` file from the provided example:
 
 ```bash
+cp .env.example .env
+```
+
+Set the endpoint and key:
+
+```dotenv
 LITELLM_UPSTREAM_BASE_URL=https://api.example.com/v1
 LITELLM_UPSTREAM_API_KEY=...
 ```
 
-The Claude compose files ask OSS-CRS to start an internal LiteLLM sidecar.
-Claude Code sends Anthropic Messages requests to that sidecar, which routes the
-configured aliases to the OpenAI-compatible upstream. The upstream credential
-is mounted only into LiteLLM; CRS containers receive a per-run proxy key. The
-Codex compose files use the same local variables as an external OSS-CRS LLM
-endpoint, so OSS-CRS injects the endpoint and key into the Codex CRS without a
-second local proxy. `configs/litellm-config.yaml` maps Opus to `gpt-5.6-sol`,
-Sonnet to `gpt-5.6-terra`, and Haiku to `gpt-5.6-luna`. The upstream must
-support `/v1/responses` with streaming function calls and
-`function_call_output`; do not add `response_format` or point Claude Code at an
-OpenAI endpoint directly.
+The checked-in configurations start an OSS-CRS-managed LiteLLM proxy using `configs/litellm-config.yaml`. The upstream endpoint must expose `gpt-5.5`, `gpt-5.4`, and `gpt-5.4-mini`; the LiteLLM config pins input, cached-input, and output prices for those models.
 
-OAuth remains available as an explicit fallback in the same two canonical
-Claude compose files. Comment out the complete `llm_config` block in
-`configs/finder-claude-code.yaml` and `configs/patcher-claude-code.yaml`, set
-`CLAUDE_CODE_OAUTH_TOKEN`, and select `--auth-mode oauth`. In this mode OSS-CRS
-does not enforce the compose `llm_budget`; configure an account-side spending
-limit instead. The LiteLLM wrappers deliberately clear OAuth so an inherited
-token cannot bypass the proxy.
+Claude Code OAuth is also supported. Comment out the complete `llm_config` block in `configs/finder-claude-code.yaml` and `configs/patcher-claude-code.yaml`, set `CLAUDE_CODE_OAUTH_TOKEN` in `.env`, and run the Claude wrapper with `--auth-mode oauth`.
 
 ## Setup
 
-Initialize the framework and inspect the local machine:
+Run the setup script to initialize the OSS-CRS submodule and check local prerequisites:
 
 ```bash
 ./scripts/setup.sh
 ```
 
-`./scripts/setup.sh --check` does not alter submodule state. It validates the
-four canonical Claude/Codex compose files and manifests without Docker, then
-reports missing runtime prerequisites. Each compose uses a relative
-`source.local_path`; all root scripts change to the repository root before
-calling OSS-CRS so that path is stable.
+Use `./scripts/setup.sh --check` to check the current setup without changing submodule state.
 
 ## Bundled Smoke Target
 
-`targets/sanity-mock-c-delta-01` is the blinded project portion of an official
-CRSBench synthetic sanity fixture. It is included so the local E2E commands are
-self-contained. The participant-visible delta hint is stored as `ref.diff`;
-organizer-only `.aixcc` metadata, reference PoVs, patches, logs, and hints are
-not included.
+`targets/sanity-mock-c-delta-01` contains the blinded project files and `ref.diff` from the CRSBench synthetic C sanity fixture. Ground truth is not included.
 
-## Claude End-To-End Run
-
-Run a short smoke workflow against the bundled target:
+## Run the Claude Code E2E
 
 ```bash
 ./scripts/run-claude-e2e.sh \
@@ -97,43 +65,7 @@ Run a short smoke workflow against the bundled target:
   --patcher-early-exit
 ```
 
-The wrapper runs the Finder to completion, resolves its submitted PoVs through
-`oss-crs artifacts`, safely flattens them into a staging directory, then starts
-the Patcher with `--pov-dir`. The two stages use separate work directories and
-separate build/run IDs because the Patcher fetches input only at startup and
-must build its own CRS-specific target output. It fails if the Finder submits no
-PoV or if the Patcher submits no non-empty `.diff`.
-
-In the Claude internal-proxy workflow, `llm_budget` is a framework circuit
-breaker. For private model aliases its cost estimates can differ from upstream
-billing, so set a provider-side limit as well. The Codex compose files use
-external mode, where OSS-CRS does not enforce `llm_budget`; an upstream limit is
-required before a long campaign.
-
-For a delta challenge, pass the delta evidence to both stages:
-
-```bash
-./scripts/run-claude-e2e.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-source-path /path/to/example-source \
-  --target-harness example_fuzzer \
-  --diff /path/to/ref.diff \
-  --seed-dir /path/to/seeds \
-  --e2e-id example-delta-001
-```
-
-The resulting local bundle contains Finder/Patcher artifact JSON, staged PoVs,
-exported patches, and handoff metadata below:
-
-```text
-submissions/<target>/e2e-<e2e-id>/
-```
-
-It is local implementation evidence, not an organizer verdict.
-
-## Codex End-To-End Run
-
-Run the equivalent smoke workflow with the Codex CRSes:
+## Run the Codex E2E
 
 ```bash
 ./scripts/run-codex-e2e.sh \
@@ -146,127 +78,50 @@ Run the equivalent smoke workflow with the Codex CRSes:
   --patcher-early-exit
 ```
 
-The Claude and Codex entrypoints share one implementation: each calls OSS-CRS
-directly, stages Finder PoVs as Patcher startup input, and requires at least one
-non-empty patch. The Codex entrypoint selects `configs/finder-codex.yaml` and
-`configs/patcher-codex.yaml`; it supports LiteLLM credentials only, not Claude
-OAuth. Target, evidence, timeout, work-directory, and output options are the
-same as for the Claude entrypoint.
+Run either wrapper with `--help` to see all target, evidence, timeout, work-directory, and output options.
 
-## Finder Run
+## Run a Single Stage
 
-Run a full-source finder campaign against one harness:
+Run the default Claude Code Finder:
 
 ```bash
 ./scripts/run-finder.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --fuzz-proj-path /path/to/oss-fuzz/project \
   --target-harness example_fuzzer \
-  --run-id example-full-001
+  --diff /path/to/ref.diff
 ```
 
-The wrapper runs `prepare`, `build-target`, and `run`, with all framework state
-under `generated/oss-crs-work/` by default. It generates matching build/run IDs
-when they are not supplied and prints the authoritative `oss-crs artifacts`
-JSON after the run.
-
-For delta analysis, pass the same diff to both the target build and run phase:
-
-```bash
-./scripts/run-finder.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-source-path /path/to/example-source \
-  --target-harness example_fuzzer \
-  --diff /path/to/ref.diff \
-  --seed-dir /path/to/seeds \
-  --run-id example-delta-001
-```
-
-The `--source-override` alias is available for `--target-source-path`. Use
-`--early-exit` only when stopping at the first submitted PoV is intended. OSS-
-CRS returns exit code `124` for a timeout or early exit; the wrapper still
-prints artifacts before returning that code.
-
-## Patcher Run
-
-Run the Patcher directly when evidence already exists:
+Run the default Claude Code Patcher with existing PoVs:
 
 ```bash
 ./scripts/run-patcher.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
+  --fuzz-proj-path /path/to/oss-fuzz/project \
   --target-harness example_fuzzer \
-  --pov-dir /path/to/povs \
-  --run-id example-patch-001
+  --diff /path/to/ref.diff \
+  --pov-dir /path/to/povs
 ```
 
-It accepts `--pov`, `--pov-dir`, `--diff`, `--seed-dir`,
-`--bug-candidate`, and `--bug-candidate-dir`. At least one evidence input is
-required. The Patcher wrapper treats a successful no-output run as failure;
-only non-empty `.diff` artifacts count as a local patch result.
+Use `--compose-file` and `--crs-name` to select a different checked-in CRS configuration.
 
-The checked-in Patcher Bake defaults to local image tags. Do not use
-`oss-crs prepare --publish` until its `REGISTRY` is explicitly set to a
-registry owned by the derived project.
+## Outputs
 
-## Artifacts And Export
+OSS-CRS build and run state is stored under `generated/oss-crs-work/`. Completed E2E bundles are exported under `submissions/<target>/e2e-<id>/` with Finder and Patcher artifact metadata, staged PoVs, and submitted patches.
 
-Resolve a completed run without guessing workdir paths:
+Use the included helpers to inspect or export a completed run:
 
 ```bash
-./scripts/print-artifacts.sh \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-harness example_fuzzer \
-  --run-id example-full-001
+./scripts/print-artifacts.sh --help
+./scripts/collect-submission.sh --help
 ```
 
-Pass `--crs-name` when resolving a non-Finder compose entry. For example,
-Patcher paths are under:
-
-```text
-.crs["crs-patcher-claude-code"]
-```
-
-Export submitted files and create a framework archive:
-
-```bash
-./scripts/collect-submission.sh \
-  --crs-name crs-patcher-claude-code \
-  --fuzz-proj-path /path/to/oss-fuzz/projects/example \
-  --target-harness example_fuzzer \
-  --run-id example-patch-001 \
-  --compose-file configs/patcher-claude-code.yaml \
-  --work-dir generated/oss-crs-work/patcher-claude-code
-```
-
-By default this writes copied artifact directories, `artifacts.json`, collection
-metadata, and `oss-crs-submission.tar.gz` below:
-
-```text
-submissions/<target>/<crs-name>/<resolved-run-id>/
-```
-
-Use `--include-all` when the archive should additionally contain exchange data
-and logs. The exported directory is local development output and is ignored by
-Git.
-
-To remove framework state or Docker resources, use the safe interactive wrapper:
+Clean generated state with:
 
 ```bash
 ./scripts/clean.sh --phase run
 ./scripts/clean.sh --artifacts --yes
 ```
 
-## Evaluation Boundary
 
-This repository provides developer-facing execution and local self-checks. A
-file in `SUBMIT_DIR/povs/`, or a locally reproducible crash, is useful evidence
-but is not an organizer score or a final vulnerability verdict.
+## Upstream Sources
 
-Organizer-authoritative evaluation is a separate service. That environment
-owns benchmark versions, ground truth, scoring policy, and independent
-verification. See [docs/evaluation-boundary.md](docs/evaluation-boundary.md).
-
-## Provenance
-
-The Finder and Patcher were imported from Team Atlanta with Git subtree history
-preserved. Their upstream revisions, import commits, and licensing follow-up
-are recorded in [docs/upstream-provenance.md](docs/upstream-provenance.md).
+The integrated CRSes retain their upstream Git histories. Source revisions and import details are listed in [docs/upstream-provenance.md](docs/upstream-provenance.md).

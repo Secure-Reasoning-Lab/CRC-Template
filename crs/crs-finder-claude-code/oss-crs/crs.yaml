@@ -53,9 +53,7 @@ supported_target:
   fuzzing_engine:
   - libfuzzer
 
-# Validation baseline when an LLM proxy is configured (llm_config). Ignored
-# when the CRS authenticates via CLAUDE_CODE_OAUTH_TOKEN.
 required_llms:
 - claude-opus-4-8
 - claude-sonnet-5
-- claude-haiku-4-5
+- claude-haiku-4-6

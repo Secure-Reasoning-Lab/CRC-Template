@@ -213,7 +213,7 @@ source "$ROOT/scripts/load-local-env.sh"
 case "$AUTH_MODE" in
   litellm)
     # Claude Code prefers OAuth whenever this is non-empty. Prevent an
-    # inherited legacy token from bypassing the framework-owned proxy.
+    # inherited legacy token from bypassing the configured proxy.
     unset CLAUDE_CODE_OAUTH_TOKEN
     load_litellm_upstream_env "$ROOT"
     [[ -n "${LITELLM_UPSTREAM_BASE_URL:-}" ]] || die 'LITELLM_UPSTREAM_BASE_URL is required for LiteLLM mode'
