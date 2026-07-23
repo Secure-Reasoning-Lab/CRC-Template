@@ -13,9 +13,7 @@ usage() {
 Runs a local CRS workflow in two isolated stages:
   Finder -> submitted PoVs -> Patcher -> submitted .diff patch
 
-The patcher starts only after the Finder exits and non-hidden PoV files have
-been safely flattened for --pov-dir. This is required because the patcher
-fetches its inputs once at container startup.
+Finder PoV files are staged before the Patcher starts.
 
 Required:
   --fuzz-proj-path PATH       OSS-Fuzz project directory
@@ -40,17 +38,15 @@ Stage options:
   --finder-build-id ID        Finder build ID (generated when omitted)
   --patcher-run-id ID         Patcher run ID (generated when omitted)
   --patcher-build-id ID       Patcher build ID (generated when omitted)
-  --finder-compose-file FILE  Override the selected agent's Finder compose
-  --patcher-compose-file FILE Override the selected agent's Patcher compose
-  --finder-work-dir DIR       Override the selected agent's Finder work directory
-  --patcher-work-dir DIR      Override the selected agent's Patcher work directory
+  --finder-compose-file FILE  Override the Finder compose file
+  --patcher-compose-file FILE Override the Patcher compose file
+  --finder-work-dir DIR       Override the Finder work directory
+  --patcher-work-dir DIR      Override the Patcher work directory
   --e2e-id ID                 Local run label (generated when omitted)
   --out-dir DIR               Local bundle directory (default: submissions/<target>/e2e-<e2e-id>)
   -h, --help                  Show this help
 
-The resulting local bundle contains finder-artifacts.json, patcher-artifacts.json,
-povs/, patches/, and handoff metadata. It is developer evidence only; it does
-not create an organizer verdict.
+The local bundle contains finder-artifacts.json, patcher-artifacts.json, povs/, patches/, and metadata.
 EOF
 }
 
@@ -535,7 +531,6 @@ metadata = {
     },
     "staged_pov_count": int(sys.argv[7]),
     "exported_patch_count": int(sys.argv[8]),
-    "verification": "local implementation workflow only; no organizer verdict",
 }
 out_path.write_text(json.dumps(metadata, indent=2) + "\n")
 PY
