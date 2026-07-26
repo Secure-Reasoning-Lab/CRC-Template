@@ -72,6 +72,20 @@ else
   note_error 'oss-crs/pyproject.toml is missing.'
 fi
 
+OSS_CRS_PATCH="$ROOT/patches/oss-crs-litellm-healthcheck-grace.patch"
+if [[ -f "$ROOT/oss-crs/pyproject.toml" ]]; then
+  if git -C "$ROOT/oss-crs" apply --reverse --check "$OSS_CRS_PATCH" >/dev/null 2>&1; then
+    note_ok 'OSS-CRS LiteLLM healthcheck grace patch is applied.'
+  elif [[ "$CHECK_ONLY" == true ]]; then
+    note_error 'OSS-CRS LiteLLM healthcheck grace patch is not applied. Run scripts/setup.sh without --check.'
+  elif git -C "$ROOT/oss-crs" apply --check "$OSS_CRS_PATCH"; then
+    git -C "$ROOT/oss-crs" apply "$OSS_CRS_PATCH"
+    note_ok 'Applied OSS-CRS LiteLLM healthcheck grace patch.'
+  else
+    note_error 'OSS-CRS LiteLLM healthcheck grace patch does not apply cleanly.'
+  fi
+fi
+
 if command -v uv >/dev/null 2>&1; then
   note_ok "uv: $(uv --version)"
   if [[ -f "$ROOT/oss-crs/pyproject.toml" ]]; then
