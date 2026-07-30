@@ -73,6 +73,8 @@ Run the setup script to initialize the OSS-CRS submodule and check local prerequ
 ./scripts/setup.sh
 ```
 
+The `oss-crs/` submodule is pinned to a revision published on the [`CRC@CSAW` branch](https://github.com/Secure-Reasoning-Lab/oss-crs/tree/CRC@CSAW) of the Secure Reasoning Lab OSS-CRS fork.
+
 Use `./scripts/setup.sh --check` to check the current setup without changing submodule state.
 
 ## Download a Smoke Target
@@ -168,4 +170,4 @@ Clean generated state with:
 
 ## Upstream Sources
 
-The integrated CRSes retain their upstream Git histories. Source revisions and import details are listed in [docs/upstream-provenance.md](docs/upstream-provenance.md).
+The OSS-CRS runtime and integrated CRSes retain their upstream licenses and attribution. Source repositories and revisions are listed in [docs/upstream-provenance.md](docs/upstream-provenance.md).

@@ -1,6 +1,14 @@
 # Upstream Provenance
 
-CRC-Template includes components derived from the following Team Atlanta repositories.
+## OSS-CRS Runtime
+
+| Local path | Maintained fork | Branch | Pinned revision | Upstream baseline | License and attribution |
+| --- | --- | --- | --- | --- | --- |
+| `oss-crs/` | [Secure-Reasoning-Lab/oss-crs](https://github.com/Secure-Reasoning-Lab/oss-crs) | `CRC@CSAW` | `8eefe84d67b2339de920cef5794933d6befeefdb` | [ossf/oss-crs](https://github.com/ossf/oss-crs) at `39712ee41f9b198e13f756ba55c56c1bde163e85` | MIT; copyright OSS-CRS Contributors; author listed as Team Atlanta |
+
+## CRS Components
+
+CRC-Template includes CRS components derived from the following Team Atlanta repositories.
 
 | Component | Local path | Upstream repository | Upstream revision | License and attribution |
 | --- | --- | --- | --- | --- |
@@ -9,4 +17,4 @@ CRC-Template includes components derived from the following Team Atlanta reposit
 | Codex Finder | `crs/crs-finder-codex/` | [Team-Atlanta/crs-bug-finding-codex](https://github.com/Team-Atlanta/crs-bug-finding-codex) | `66d2ca60573fdf84dd9b3325cdb574abfcd767bd` | MIT declared in `pyproject.toml` |
 | Codex Patcher | `crs/crs-patcher-codex/` | [Team-Atlanta/crs-codex](https://github.com/Team-Atlanta/crs-codex) | `cb1b0d939832f56bdc8f74f4c9ab450d158833c6` | MIT; copyright gts3.org (SSLab@Gatech); author listed as Team Atlanta |
 
-The revisions above identify the upstream source baselines used by this repository. Upstream authorship, license files, and copyright notices are retained with the corresponding components where provided.
+The revisions above identify the source baselines used by this repository. Upstream authorship, license files, and copyright notices are retained with the corresponding components where provided.
