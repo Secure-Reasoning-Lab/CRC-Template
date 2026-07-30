@@ -33,15 +33,17 @@ The selected Finder must declare `type: [bug-finding]`; the selected Patcher mus
 Model dependencies belong in each CRS's `required_llms` declaration.
 Runtime resources, credentials, timeouts, budgets, and benchmark selection are supplied by the evaluator.
 
-Files under `configs/` are local execution profiles used by the scripts in this repository.
-They are not part of the evaluation policy.
+Files under `configs/` are local execution profiles used by the scripts in this repository. They are not part of the evaluation policy.
+
+The default profiles mirror the CRC-Evaluate qualification compute settings: 16 shared logical CPUs, a 64G memory limit, and a $50 LLM budget for each Finder or Patcher run.
 
 ## Requirements
 
 - Linux with Git and submodule support
 - [uv](https://docs.astral.sh/uv/)
 - Docker Engine with Docker Compose v2
-- At least 8 logical CPUs and approximately 24 GB of memory for the default configuration
+- [CRC-Evaluate](https://github.com/Secure-Reasoning-Lab/CRC-Evaluate) (recommended), a competition-oriented fork of [CRSBench](https://github.com/sslab-gatech/CRSBench), and access to the gated [CRSBench dataset](https://huggingface.co/datasets/sslab-gatech/crsbench-dataset) for downloading targets
+- 16 logical CPUs and 64 GB of memory for the default configuration
 - An upstream OpenAI-compatible LLM endpoint and API key
 
 ## Configure the LLM Endpoint
@@ -73,9 +75,24 @@ Run the setup script to initialize the OSS-CRS submodule and check local prerequ
 
 Use `./scripts/setup.sh --check` to check the current setup without changing submodule state.
 
-## Bundled Smoke Target
+## Download a Smoke Target
 
-`targets/sanity-mock-c-delta-01` contains the blinded project files and `ref.diff` from the CRSBench synthetic C sanity fixture. Ground truth is not included.
+CRC-Template does not include benchmark data. Request access to the CRSBench dataset, clone CRC-Evaluate next to this repository, authenticate with Hugging Face, and download the C sanity benchmark into `targets/`:
+
+```bash
+git clone --recurse-submodules https://github.com/Secure-Reasoning-Lab/CRC-Evaluate.git ../CRC-Evaluate
+(
+  cd ../CRC-Evaluate
+  uv sync
+  uv run hf auth login
+  uv run crsbench download \
+    --dataset crsbench \
+    --benchmarks sanity-mock-c-delta-01 \
+    --output-dir ../CRC-Template/targets
+)
+```
+
+The downloaded target is ignored by Git and remains in `targets/sanity-mock-c-delta-01`. The reference diff used by the local Delta-mode examples is stored at `.aixcc/ref.diff` inside the target.
 
 ## Run the Claude Code E2E
 
@@ -83,7 +100,7 @@ Use `./scripts/setup.sh --check` to check the current setup without changing sub
 ./scripts/run-claude-e2e.sh \
   --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
   --target-harness fuzz_parse_buffer_section \
-  --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
+  --diff "$PWD/targets/sanity-mock-c-delta-01/.aixcc/ref.diff" \
   --finder-timeout 720 \
   --patcher-timeout 720 \
   --finder-early-exit \
@@ -96,7 +113,7 @@ Use `./scripts/setup.sh --check` to check the current setup without changing sub
 ./scripts/run-codex-e2e.sh \
   --fuzz-proj-path "$PWD/targets/sanity-mock-c-delta-01" \
   --target-harness fuzz_parse_buffer_section \
-  --diff "$PWD/targets/sanity-mock-c-delta-01/ref.diff" \
+  --diff "$PWD/targets/sanity-mock-c-delta-01/.aixcc/ref.diff" \
   --finder-timeout 720 \
   --patcher-timeout 720 \
   --finder-early-exit \
@@ -104,6 +121,8 @@ Use `./scripts/setup.sh --check` to check the current setup without changing sub
 ```
 
 Run either wrapper with `--help` to see all target, evidence, timeout, work-directory, and output options.
+
+To adjust the LLM proxy routing or model aliases, edit [`configs/litellm-config.yaml`](configs/litellm-config.yaml); the example configuration maps the Claude model aliases used by the bundled Claude Code CRSes to GPT models.
 
 ## Run a Single Stage
 

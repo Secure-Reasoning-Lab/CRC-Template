@@ -146,8 +146,8 @@ fi
 
 if command -v nproc >/dev/null 2>&1; then
   cpu_count="$(nproc)"
-  if ((cpu_count < 8)); then
-    note_warn "The default compose allocation names CPUs 0-7, but nproc reports ${cpu_count}. Adjust the compose files before running."
+  if ((cpu_count < 16)); then
+    note_warn "The default compose allocation names CPUs 0-15, but nproc reports ${cpu_count}. Adjust the compose files before running."
   else
     note_ok "CPU check: ${cpu_count} logical CPUs available to this shell."
   fi
@@ -155,8 +155,8 @@ fi
 
 if [[ -r /proc/meminfo ]]; then
   memory_kib="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
-  if [[ -n "$memory_kib" ]] && ((memory_kib < 25165824)); then
-    note_warn 'The default compose reserves 24G across finder and infrastructure; the host reports less than 24G.'
+  if [[ -n "$memory_kib" ]] && ((memory_kib < 67108864)); then
+    note_warn 'The default compose profile uses a 64G memory limit; the host reports less than 64G.'
   fi
 fi
 

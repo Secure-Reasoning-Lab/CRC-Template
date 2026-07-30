@@ -67,11 +67,9 @@ artifacts/
 generated/
 runs/
 
-# Keep the bundled smoke target; ignore other local drops and submissions.
+# Ignore downloaded targets and local submissions.
 targets/*
 !targets/.gitkeep
-!targets/sanity-mock-c-delta-01/
-!targets/sanity-mock-c-delta-01/**
 submissions/*
 !submissions/.gitkeep
 

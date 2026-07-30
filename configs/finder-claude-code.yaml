@@ -2,8 +2,8 @@ run_env: local
 docker_registry: local
 
 oss_crs_infra:
-  cpuset: "0-1"
-  memory: "8G"
+  cpuset: "0-15"
+  memory: "64G"
 
 # For Claude Code OAuth, comment out this block and use --auth-mode oauth.
 llm_config:
@@ -16,9 +16,9 @@ llm_config:
 crs-finder-claude-code:
   source:
     local_path: crs/crs-finder-claude-code
-  cpuset: "2-7"
-  memory: "16G"
-  llm_budget: 30
+  cpuset: "0-15"
+  memory: "64G"
+  llm_budget: 50
   additional_env:
     ANTHROPIC_MODEL: claude-opus-4-8
     CLAUDE_CODE_SUBAGENT_MODEL: claude-sonnet-5
